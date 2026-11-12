@@ -1,8 +1,8 @@
-/* Finance Manager PWA offline cache (hosted on GitHub Pages)
-   sw.js lives at the site root alongside the page, so its default scope covers the whole site,
-   which lets it cache the page itself, so a cold start from the home-screen icon while offline is served from cache.
-   Note: never cache Microsoft sign-in or Graph API requests. */
-var CACHE = "finance-pwa-v5";
+/* 财务管理 PWA 离线缓存（GitHub Pages 托管）
+   sw.js 与页面同在站点根目录，默认作用域覆盖整个站点，
+   因此可以缓存页面本身，断网冷启动从桌面图标打开时由缓存提供页面。
+   注意：绝不缓存 Microsoft 登录与 Graph API 的请求。 */
+var CACHE = "finance-pwa-v6";
 var PAGE_URL = "https://mmmjp92.github.io/finance-pwa/";
 var SHELL = [
   PAGE_URL,
@@ -18,7 +18,7 @@ self.addEventListener("install", function (e) {
       return Promise.all(SHELL.map(function (u) {
         return c.add(u).catch(function () { failed.push(u); });
       })).then(function () {
-        if (failed.length) console.warn("Offline cache incomplete, missing: " + failed.join(", "));
+        if (failed.length) console.warn("离线缓存未完成，缺少：" + failed.join(", "));
       });
     }).then(function () { return self.skipWaiting(); })
   );
@@ -37,11 +37,11 @@ self.addEventListener("activate", function (e) {
 self.addEventListener("fetch", function (e) {
   var url = e.request.url;
   if (e.request.method !== "GET") return;
-  /* Sign-in and cloud data requests always go to the network, never into the cache */
+  /* 登录与云端数据请求永远走网络，不进缓存 */
   if (url.indexOf("login.microsoftonline.com") >= 0 ||
       url.indexOf("graph.microsoft.com") >= 0 ||
       url.indexOf("msauth.net") >= 0) return;
-  /* Page navigation: network first, fall back to the cached page when offline */
+  /* 页面导航：网络优先，断网时回退到缓存里的页面 */
   if (e.request.mode === "navigate") {
     e.respondWith(
       fetch(e.request).then(function (resp) {
@@ -55,7 +55,7 @@ self.addEventListener("fetch", function (e) {
     );
     return;
   }
-  /* Static assets: cache first, refresh in the background */
+  /* 静态资源：缓存优先，后台更新 */
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(function (hit) {
       var net = fetch(e.request).then(function (resp) {
