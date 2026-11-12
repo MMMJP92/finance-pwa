@@ -1394,18 +1394,12 @@ function scheduleAutoSync(){
 function connectOneDrive(){
   if(!initMsal()) return;
   if(odAccount){ setSyncMsg("已连接 OneDrive（" + (odAccount.username || "") + "）。点立即同步即可同步。", true); return; }
-  setSyncMsg("正在打开微软登录…");
+  setSyncMsg("正在跳转到微软登录，登录后自动返回本页…");
   var loginReq = { scopes: OD_SCOPES, loginHint: "markpry92@hotmail.com", prompt: "select_account" };
-  msalApp.loginPopup(loginReq).then(function(resp){
-    odAccount = resp.account; msalApp.setActiveAccount(odAccount);
-    updateSyncUI();
-    setSyncMsg("已连接 OneDrive，开始首次同步…", true);
-    syncNow(true);
-  }).catch(function(err){
+  /* Redirect sign-in: same-page jump to Microsoft, which returns to this page;
+     restoreAccount()'s handleRedirectPromise() picks up the account on load. */
+  msalApp.loginRedirect(loginReq).catch(function(err){
     var msg = (err && (err.errorMessage || err.message)) || String(err);
-    if(/popup/i.test(msg)) { /* If the popup is blocked, fall back to full-page redirect sign-in */
-      msalApp.loginRedirect(loginReq); return;
-    }
     if(/AADSTS50011|redirect/i.test(msg)) msg = "跳转地址不匹配（AADSTS50011）：按上方第 2–3 步在 Azure 加单页应用跳转地址后重试。";
     setSyncMsg("连接失败：" + msg, false);
   });

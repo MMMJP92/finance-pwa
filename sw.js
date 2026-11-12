@@ -2,7 +2,7 @@
    sw.js 与页面同在站点根目录，默认作用域覆盖整个站点，
    因此可以缓存页面本身，断网冷启动从桌面图标打开时由缓存提供页面。
    注意：绝不缓存 Microsoft 登录与 Graph API 的请求。 */
-var CACHE = "finance-pwa-v7";
+var CACHE = "finance-pwa-v8";
 var PAGE_URL = "https://mmmjp92.github.io/finance-pwa/";
 var SHELL = [
   PAGE_URL,
