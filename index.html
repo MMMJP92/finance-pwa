@@ -226,18 +226,8 @@
   <!-- ================= Overview ================= -->
   <section class="panel active" id="panel-home">
     <div class="card">
-      <h2>本月预算进度</h2>
-      <p class="hint">按分类与性质汇总，退款已冲减支出。</p>
-      <div id="homeBudgets"></div>
-    </div>
-    <div class="card">
       <h2>最近记录</h2>
       <div id="homeRecent"></div>
-    </div>
-    <div class="card">
-      <h2>分类一览</h2>
-      <p class="hint">据随手记历史整理：10 个大类，支出 24 子类、收入 6 子类。</p>
-      <div id="catOverview"></div>
     </div>
   </section>
 
@@ -831,7 +821,6 @@ function budgetRowHTML(b, editable){
     '<div class="sub">已用 '+pct+'%'+(editable?' · <a href="#" data-budget-edit="'+esc(b.dim+"|"+b.target)+'">改金额</a>':'')+'</div></div>';
 }
 function renderBudgets(){
-  $("homeBudgets").innerHTML=budgets.slice(0,4).map(function(b){return budgetRowHTML(b,false);}).join("") || '<div class="empty">暂无预算</div>';
   $("budgetList").innerHTML=budgets.map(function(b){return budgetRowHTML(b,true);}).join("");
   document.querySelectorAll("[data-budget-edit]").forEach(function(a){
     a.addEventListener("click",function(e){
@@ -928,11 +917,6 @@ function renderInvest(){
     return '<div style="display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0"><span>'+esc(EN_ZH_HOLDING[h.name]||h.name)+'</span><b>'+h.maturity+' · 剩 '+days+' 天</b></div>';
   }).join("");
 }
-function renderCats(){
-  $("catOverview").innerHTML=CATS.map(function(c){
-    return '<div style="margin-bottom:8px"><b>'+esc(c.g)+'</b>: '+c.subs.map(function(s){return esc(s[0])+' <span class="tag '+s[1]+'">'+NATURE_NAME[s[1]]+"</span>";}).join(" · ")+"</div>";
-  }).join("")+'<div><b>收入</b>：'+INCOME_CATS.map(function(s){return esc(s[0]);}).join(" · ")+"</div>";
-}
 function renderMerchants(){
   $("merchantGrid").innerHTML=merchants.map(function(m,i){
     return '<button class="mcard" data-merchant="'+i+'"><b>'+esc(zhMerchant(m.name))+'</b><span>'+esc(zhSub(m.cat))+'</span></button>';
@@ -960,7 +944,7 @@ function renderTemplates(){
     b.addEventListener("click",function(){ templates.splice(Number(b.getAttribute("data-tpldel")),1); settingsDirty=true; renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync(); });
   });
 }
-function renderAll(){ renderSummary(); renderBudgets(); renderTxns(); renderAccounts(); renderInvest(); renderCats(); renderMerchants(); renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync(); }
+function renderAll(){ renderSummary(); renderBudgets(); renderTxns(); renderAccounts(); renderInvest(); renderMerchants(); renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync(); }
 
 /* ==================== Entry Form ==================== */
 var curType="expense";
