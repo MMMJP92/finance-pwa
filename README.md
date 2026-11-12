@@ -1,12 +1,10 @@
-# 财务管理 PWA
+# Finance Manager PWA
 
 Personal finance PWA: income/expense bookkeeping, bank and credit-card accounts,
 investment and registered accounts (TFSA / FHSA), budgets, templates and merchants.
 Offline-first: the app shell and data are cached on the device, so it opens from
 the home-screen icon with no network. Data syncs to OneDrive folder `Finance`
 as `finance-data.json` (Microsoft sign-in required, Files.ReadWrite only).
-
-中文：记账 · 银行与信用卡 · 投资理财。离线可用，数据同步到 OneDrive `Finance/finance-data.json`。
 
 ## Install
 

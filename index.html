@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -11,8 +11,8 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="财务管理" />
-<title>财务管理</title>
+<meta name="apple-mobile-web-app-title" content="Finance Manager" />
+<title>Finance Manager</title>
 <style>
   :root{
     --bg:#f4f6f3; --surface:#ffffff; --surface2:#eef2ec; --ink:#17211a; --muted:#5c6a60;
@@ -32,7 +32,7 @@
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     font-size:15px;line-height:1.55}
   button,[role="button"],select,summary,input:not([type="checkbox"]){min-height:2.25rem}
   button{font:inherit;cursor:pointer}
@@ -132,7 +132,7 @@
   .kv b{font-variant-numeric:tabular-nums}
   .filebox{border:1.5px dashed var(--line);border-radius:10px;padding:16px;text-align:center;color:var(--muted);font-size:14px}
   .filebox input{max-width:320px;margin:8px auto 0}
-  /* ---------- 同步状态 / 安装 ---------- */
+  /* ---------- Sync Status / Install ---------- */
   .syncstrip{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;
     background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
     padding:12px 18px;margin-top:14px}
@@ -157,38 +157,38 @@
 <body>
 <div class="wrap">
 
-  <!-- ================= 总览头 ================= -->
+  <!-- ================= Overview Header ================= -->
   <div class="hero">
     <div class="hero-top">
       <div>
-        <h1>财务总览</h1>
-        <p class="sub">记账 · 银行与信用卡 · 投资理财，一个入口。数据文件：OneDrive <b>Finance/finance-data.json</b></p>
+        <h1>Financial Overview</h1>
+        <p class="sub">Bookkeeping, bank and credit cards, and investments — all in one place. Data file: OneDrive <b>Finance/finance-data.json</b></p>
       </div>
       <div class="networth">
-        <div class="label">净资产（CAD）</div>
+        <div class="label">Net Worth (CAD)</div>
         <div class="value" id="nwValue">—</div>
       </div>
     </div>
     <div class="stat-row">
-      <div class="stat"><div class="k">可用余额（不含虚拟预留）</div><div class="v" id="stAvail">—</div><div class="note">日常能花的钱</div></div>
-      <div class="stat"><div class="k">已预留（虚拟账户）</div><div class="v" id="stReserved">—</div><div class="note">房租等已 set aside</div></div>
-      <div class="stat"><div class="k">投资市值</div><div class="v" id="stInvest">—</div><div class="note">TFSA 持仓，见「投资」页</div></div>
-      <div class="stat"><div class="k">本月收支</div><div class="v" id="stMonth">—</div><div class="note" id="stMonthNote">收入 − 支出（已扣退款）</div></div>
+      <div class="stat"><div class="k">Available Balance (excl. virtual reserves)</div><div class="v" id="stAvail">—</div><div class="note">Money you can actually spend</div></div>
+      <div class="stat"><div class="k">Reserved (Virtual Accounts)</div><div class="v" id="stReserved">—</div><div class="note">Set aside for rent, etc.</div></div>
+      <div class="stat"><div class="k">Investment Value</div><div class="v" id="stInvest">—</div><div class="note">TFSA holdings - see Investments</div></div>
+      <div class="stat"><div class="k">This Month</div><div class="v" id="stMonth">—</div><div class="note" id="stMonthNote">Income minus Expenses (net of refunds)</div></div>
     </div>
   </div>
 
-  <!-- ================= 同步状态 ================= -->
+  <!-- ================= Sync Status ================= -->
   <div class="syncstrip" role="status">
     <div class="items">
-      <span><span class="dot" id="netDot"></span><b id="netState">检测网络中…</b></span>
-      <span>OneDrive：<b id="odState">未连接</b></span>
-      <span>离线外壳：<b id="swState">检测中…</b></span>
-      <span>上次同步：<b id="lastSync">从未</b></span>
-      <span>待同步：<b id="pendingCount">0 条</b></span>
+      <span><span class="dot" id="netDot"></span><b id="netState">Checking network...</b></span>
+      <span>OneDrive: <b id="odState">Not connected</b></span>
+      <span>Offline Shell: <b id="swState">Checking...</b></span>
+      <span>Last Sync: <b id="lastSync">Never</b></span>
+      <span>Pending: <b id="pendingCount">0 items</b></span>
     </div>
     <div class="actions">
-      <button class="btn small" id="btnSyncNow">立即同步</button>
-      <button class="btn small ghost" id="btnInstallTop">装到桌面</button>
+      <button class="btn small" id="btnSyncNow">Sync Now</button>
+      <button class="btn small ghost" id="btnInstallTop">Add to Home Screen</button>
     </div>
   </div>
   <p class="msg" id="syncMsg" style="margin:6px 2px 0"></p>
@@ -196,350 +196,350 @@
 
   <!-- ================= Tabs ================= -->
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" aria-selected="true" data-tab="home">总览</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="book">记账</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="accounts">账户</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="invest">投资</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="budget">预算</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="sync">导入 / 同步</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="setup">安装 / 连接</button>
+    <button class="tab" role="tab" aria-selected="true" data-tab="home">Overview</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="book">Bookkeeping</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="accounts">Accounts</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="invest">Investments</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="budget">Budget</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="sync">Import / Sync</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="setup">Install / Connect</button>
   </div>
 
-  <!-- ================= 总览 ================= -->
+  <!-- ================= Overview ================= -->
   <section class="panel active" id="panel-home">
     <div class="card">
-      <h2>本月预算进度</h2>
-      <p class="hint">按类别与「固定 / 灵活 / 偶发」两个维度汇总，退款已冲减支出。完整设置在「预算」页。</p>
+      <h2>This Month Budget Progress</h2>
+      <p class="hint">Summarized by category and by Fixed / Flexible / One-off. Refunds reduce spending. Full settings are in the Budget tab.</p>
       <div id="homeBudgets"></div>
     </div>
     <div class="card">
-      <h2>最近记录</h2>
+      <h2>Recent Transactions</h2>
       <div id="homeRecent"></div>
     </div>
     <div class="card">
-      <h2>类别速览</h2>
-      <p class="hint">按随手记 2,976 条历史整理：10 个类别、支出 24 个子类别、收入 6 个子类别，每个子类别带固定 / 灵活 / 偶发属性。</p>
+      <h2>Categories at a Glance</h2>
+      <p class="hint">Based on 2,976 Suishouji history records: 10 categories, 24 expense subcategories, and 6 income subcategories, each tagged Fixed / Flexible / One-off.</p>
       <div id="catOverview"></div>
     </div>
   </section>
 
-  <!-- ================= 记账 ================= -->
+  <!-- ================= Bookkeeping ================= -->
   <section class="panel" id="panel-book">
     <div class="card">
-      <h2>记账模板 <span class="pill">一键预填</span></h2>
-      <p class="hint">点一下就把类型、类别、性质、账户、商户、备注（固定金额的连金额）填进下面的表单，只改日期就能存。模板可在「模板管理」里增删改，任意一笔记录也能存为模板。</p>
+      <h2>Quick Templates <span class="pill">One-tap Prefill</span></h2>
+      <p class="hint">Tap a template to prefill type, category, nature, account, merchant, and note (plus amount for fixed-amount templates) in the form below — just adjust the date and save. Manage templates below; you can also save any entry as a template.</p>
       <div class="chips" id="tplChips"></div>
       <details>
-        <summary>模板管理（新建 / 修改 / 删除）</summary>
+        <summary>Manage Templates (Add / Edit / Delete)</summary>
         <div id="tplManage" style="margin-top:8px"></div>
         <div class="form-grid" style="margin-top:10px">
-          <label><span>模板名</span><input id="ntName" placeholder="如：停车费"></label>
-          <label><span>类别</span><select id="ntCat"></select></label>
-          <label><span>金额（可空）</span><input id="ntAmt" type="number" step="0.01" min="0" placeholder="0.00"></label>
-          <label><span>账户</span><select id="ntAcct"></select></label>
-          <label><span>商户（可空）</span><input id="ntMerchant" placeholder="商户名"></label>
-          <label><span>备注（可空）</span><input id="ntNote" placeholder="备注"></label>
+          <label><span>Template Name</span><input id="ntName" placeholder="e.g., Parking"></label>
+          <label><span>Category</span><select id="ntCat"></select></label>
+          <label><span>Amount (optional)</span><input id="ntAmt" type="number" step="0.01" min="0" placeholder="0.00"></label>
+          <label><span>Account</span><select id="ntAcct"></select></label>
+          <label><span>Merchant (optional)</span><input id="ntMerchant" placeholder="Merchant name"></label>
+          <label><span>Note (optional)</span><input id="ntNote" placeholder="Note"></label>
         </div>
-        <button class="btn small" id="ntAdd">新建模板</button>
+        <button class="btn small" id="ntAdd">Add Template</button>
         <span class="msg" id="ntMsg"></span>
       </details>
     </div>
 
     <div class="card">
-      <h2 id="formTitle">记一笔</h2>
+      <h2 id="formTitle">Add an Entry</h2>
       <div class="seg" id="typeSeg">
-        <button data-type="expense" class="on">支出</button>
-        <button data-type="income">收入</button>
-        <button data-type="refund">退款</button>
-        <button data-type="transfer">转账</button>
+        <button data-type="expense" class="on">Expense</button>
+        <button data-type="income">Income</button>
+        <button data-type="refund">Refund</button>
+        <button data-type="transfer">Transfer</button>
       </div>
 
-      <!-- 收支/退款表单 -->
+      <!-- Income/Expense/Refund Form -->
       <div id="formSimple">
         <div class="form-grid">
-          <label><span>日期</span><input type="date" id="fDate"></label>
-          <label><span>金额（CAD）</span><input type="number" id="fAmt" step="0.01" min="0" placeholder="0.00"></label>
-          <label><span>类别</span><select id="fCat"></select></label>
-          <label><span>性质</span><select id="fNature"><option value="fixed">固定</option><option value="flex">灵活</option><option value="once">偶发</option></select></label>
-          <label><span>账户</span><select id="fAcct"></select></label>
-          <label><span>商户</span><input id="fMerchant" list="merchantList" placeholder="输入联想，如 No Frills"><datalist id="merchantList"></datalist></label>
-          <label><span>备注</span><input id="fNote" placeholder="备注"></label>
+          <label><span>Date</span><input type="date" id="fDate"></label>
+          <label><span>Amount (CAD)</span><input type="number" id="fAmt" step="0.01" min="0" placeholder="0.00"></label>
+          <label><span>Category</span><select id="fCat"></select></label>
+          <label><span>Nature</span><select id="fNature"><option value="fixed">Fixed</option><option value="flex">Flexible</option><option value="once">One-off</option></select></label>
+          <label><span>Account</span><select id="fAcct"></select></label>
+          <label><span>Merchant</span><input id="fMerchant" list="merchantList" placeholder="Start typing, e.g., No Frills"><datalist id="merchantList"></datalist></label>
+          <label><span>Note</span><input id="fNote" placeholder="Note"></label>
         </div>
         <div id="refundLink" style="display:none">
-          <label><span>关联原支出（可选，不强制）— 按商户 / 备注 / 金额搜索</span>
-            <input id="fRefundSearch" placeholder="输入关键词筛选下面的原支出">
+          <label><span>Link to Original Expense (optional) — search by merchant / note / amount</span>
+            <input id="fRefundSearch" placeholder="Type keywords to filter expenses below">
           </label>
-          <label><span>选择原支出</span><select id="fRefundPick"><option value="">不关联</option></select></label>
-          <p class="hint">退款会冲减原类别的支出，不计入收入，不会虚增收入数字。</p>
+          <label><span>Select Original Expense</span><select id="fRefundPick"><option value="">Do not link</option></select></label>
+          <p class="hint">Refunds reduce spending in the original category. They do not count as income and will not inflate income totals.</p>
         </div>
-        <button class="btn" id="btnAdd">保存这笔</button>
-        <button class="btn ghost" id="btnSaveTpl">存为模板</button>
+        <button class="btn" id="btnAdd">Save Entry</button>
+        <button class="btn ghost" id="btnSaveTpl">Save as Template</button>
         <div class="msg" id="addMsg"></div>
       </div>
 
-      <!-- 转账表单 -->
+      <!-- Transfer Form -->
       <div id="formTransfer" style="display:none">
         <div class="form-grid">
-          <label><span>日期</span><input type="date" id="tDate"></label>
-          <label><span>转出账户</span><select id="tFrom"></select></label>
-          <label><span>转出金额</span><input type="number" id="tAmtOut" step="0.01" min="0" placeholder="0.00"></label>
-          <label><span>转入账户</span><select id="tTo"></select></label>
-          <label><span>转入金额（跨币种时不同）</span><input type="number" id="tAmtIn" step="0.01" min="0" placeholder="同币种可留空"></label>
-          <label><span>备注</span><input id="tNote" placeholder="如：预留房租 / 还信用卡"></label>
+          <label><span>Date</span><input type="date" id="tDate"></label>
+          <label><span>From Account</span><select id="tFrom"></select></label>
+          <label><span>Amount Out</span><input type="number" id="tAmtOut" step="0.01" min="0" placeholder="0.00"></label>
+          <label><span>To Account</span><select id="tTo"></select></label>
+          <label><span>Amount In (differs for cross-currency)</span><input type="number" id="tAmtIn" step="0.01" min="0" placeholder="Leave blank if same currency"></label>
+          <label><span>Note</span><input id="tNote" placeholder="e.g., Reserve rent / Pay credit card"></label>
         </div>
-        <p class="hint" id="fxHint">同币种转账两边金额相同；跨币种（如 USD → CAD）分别填两边金额，这里会自动反推参考汇率。转账不计入收支统计。</p>
-        <button class="btn" id="btnTransfer">保存转账</button>
+        <p class="hint" id="fxHint">For same-currency transfers both sides are equal. For cross-currency (e.g., USD to CAD), enter both amounts and the implied rate is calculated automatically. Transfers do not count toward income or expenses.</p>
+        <button class="btn" id="btnTransfer">Save Transfer</button>
         <div class="msg" id="transferMsg"></div>
       </div>
     </div>
 
     <div class="card">
-      <h2>全部记录</h2>
+      <h2>All Transactions</h2>
       <div class="form-grid" style="margin-bottom:6px">
-        <label><span>搜索（备注 / 商户 / 类别）</span><input id="qSearch" placeholder="关键词"></label>
-        <label><span>只看类别</span><select id="qCat"><option value="">全部类别</option></select></label>
-        <label><span>只看类型</span><select id="qType"><option value="">全部</option><option value="expense">支出</option><option value="income">收入</option><option value="refund">退款</option><option value="transfer">转账</option></select></label>
+        <label><span>Search (note / merchant / category)</span><input id="qSearch" placeholder="Keywords"></label>
+        <label><span>Filter by Category</span><select id="qCat"><option value="">All Categories</option></select></label>
+        <label><span>Filter by Type</span><select id="qType"><option value="">All</option><option value="expense">Expense</option><option value="income">Income</option><option value="refund">Refund</option><option value="transfer">Transfer</option></select></label>
       </div>
       <div id="txnList"></div>
     </div>
 
     <div class="card">
-      <h2>常用商户</h2>
-      <p class="hint">按随手记备注里出现频率预置，点商户可直接带进记账表单（连默认类别一起）。记账时输入商户名也会自动带出默认类别。</p>
+      <h2>Frequent Merchants</h2>
+      <p class="hint">Preset from your most frequent Suishouji notes. Tap a merchant to prefill the entry form (with its default category). Typing a merchant name while bookkeeping also auto-fills its default category.</p>
       <div class="mgrid" id="merchantGrid"></div>
       <div class="form-grid" style="margin-top:12px">
-        <label><span>新商户名</span><input id="nmName" placeholder="商户名"></label>
-        <label><span>默认类别</span><select id="nmCat"></select></label>
+        <label><span>New Merchant Name</span><input id="nmName" placeholder="Merchant name"></label>
+        <label><span>Default Category</span><select id="nmCat"></select></label>
       </div>
-      <button class="btn small" id="nmAdd">添加商户</button>
+      <button class="btn small" id="nmAdd">Add Merchant</button>
       <span class="msg" id="nmMsg"></span>
     </div>
   </section>
 
-  <!-- ================= 账户 ================= -->
+  <!-- ================= Accounts ================= -->
   <section class="panel" id="panel-accounts">
     <div class="card">
-      <h2>账户</h2>
-      <p class="hint">按随手记 12 个真实账户整理：常用账户在上；Scotia、工行的老账户已归档（数据保留，默认隐藏）。余额为 CAD $0 的账户需导入历史或手动对账后才是真实数字。</p>
+      <h2>Accounts</h2>
+      <p class="hint">Based on your 12 real Suishouji accounts: everyday accounts on top; old Scotia and ICBC accounts are archived (data kept, hidden by default). Accounts showing CAD $0 need history imported or a manual reconciliation to show real balances.</p>
       <div id="acctList"></div>
       <details>
-        <summary>已归档账户（4 个）</summary>
+        <summary>Archived Accounts (4)</summary>
         <div id="acctArchived"></div>
       </details>
     </div>
     <div class="card">
-      <h2>虚拟账户：预留不算可用 <span class="pill amber">推荐用法</span></h2>
-      <p class="hint"><b>TD for Rent</b> 就是这个用法：每月从 TD Chequing 转 CAD $2,100 进去，再付 CAD $2,100 房租。钱确实在账上，但已经 set aside 给未来必付的房租，所以<b>不计入可用余额和净资产</b>，总览单独显示「已预留」，避免高估自己手头有多少钱。TD to Lili 同理。</p>
-      <p class="hint">比起不建这个账户、只在心里记着，虚拟账户的好处是：转账记录完整可查、房租到期直接从预留里付、可用余额永远是真实能花的数。</p>
+      <h2>Virtual Accounts: Reserved Does Not Count as Available <span class="pill amber">Recommended</span></h2>
+      <p class="hint"><b>TD for Rent</b> works exactly this way: each month you transfer CAD $2,100 in from TD Chequing, then pay CAD $2,100 in rent. The money is really in the account, but it is already set aside for upcoming rent, so it <b>does not count toward available balance or net worth</b>. The overview shows it separately as Reserved so you do not overestimate what you have to spend. TD to Lili works the same way.</p>
+      <p class="hint">Compared with just keeping it in your head, a virtual account keeps a complete transfer trail, lets you pay rent directly from the reserve when it is due, and keeps your available balance honest.</p>
       <div id="virtualList"></div>
     </div>
   </section>
 
-  <!-- ================= 投资 ================= -->
+  <!-- ================= Investments ================= -->
   <section class="panel" id="panel-invest">
     <div class="card">
-      <h2>投资持仓 <span class="pill">已从 Google Drive 投资表合并</span></h2>
-      <p class="hint">原「Investment &amp; Registered Accounts Tracker」已复制到 OneDrive <b>Finance/</b> 文件夹（6 个页签 + 迁移说明，原件保留未删），持仓数据合并进这里，不再单独维护一张表。</p>
+      <h2>Investment Holdings <span class="pill">Merged from Google Drive tracker</span></h2>
+      <p class="hint">The original Investment &amp; Registered Accounts Tracker was copied to the OneDrive <b>Finance/</b> folder (6 tabs + migration notes; the original was kept, not deleted). Holdings are merged here so you no longer maintain a separate sheet.</p>
       <table>
-        <thead><tr><th>持仓</th><th>类型</th><th class="num">本金 / 份额</th><th class="num">利率 / 净值</th><th>到期 / 备注</th><th class="num">市值 (CAD)</th></tr></thead>
+        <thead><tr><th>Holding</th><th>Type</th><th class="num">Principal / Units</th><th class="num">Rate / NAV</th><th>Maturity / Notes</th><th class="num">Market Value (CAD)</th></tr></thead>
         <tbody id="holdBody"></tbody>
-        <tfoot><tr><td colspan="5" style="font-weight:700">TFSA 合计</td><td class="num" style="font-weight:700" id="holdTotal">—</td></tr></tfoot>
+        <tfoot><tr><td colspan="5" style="font-weight:700">TFSA Total</td><td class="num" style="font-weight:700" id="holdTotal">—</td></tr></tfoot>
       </table>
     </div>
     <div class="grid2">
       <div class="card">
-        <h2>注册账户额度</h2>
+        <h2>Registered Account Room</h2>
         <div class="kv">
-          <div><span>TFSA 额度（2023–2026，CRA 口径）</span><b>CAD $27,500</b></div>
-          <div><span>TFSA 已用</span><b>已全额使用</b></div>
-          <div><span>FHSA（TD）</span><b>已开户，未注资</b></div>
-          <div><span>非注册账户</span><b>无</b></div>
+          <div><span>TFSA Room (2023-2026, per CRA)</span><b>CAD $27,500</b></div>
+          <div><span>TFSA Used</span><b>Fully used</b></div>
+          <div><span>FHSA (TD)</span><b>Opened, not yet funded</b></div>
+          <div><span>Non-registered Accounts</span><b>None</b></div>
         </div>
       </div>
       <div class="card">
-        <h2>GIC 到期提醒</h2>
+        <h2>GIC Maturity Reminders</h2>
         <div id="gicCountdown"></div>
       </div>
     </div>
   </section>
 
-  <!-- ================= 预算 ================= -->
+  <!-- ================= Budget ================= -->
   <section class="panel" id="panel-budget">
     <div class="card">
-      <h2>月度预算</h2>
-      <p class="hint">三个维度可同时用：按<b>总额</b>、按<b>类别</b>、按<b>固定 / 灵活 / 偶发</b>。改金额即时生效，本月实际按已记支出（扣退款）计算。</p>
+      <h2>Monthly Budget</h2>
+      <p class="hint">Use three views at once: by <b>total</b>, by <b>category</b>, and by <b>Fixed / Flexible / One-off</b>. Changes apply instantly. This month actuals are based on recorded expenses (net of refunds).</p>
       <div id="budgetList"></div>
-      <h3>新增预算</h3>
+      <h3>Add a Budget</h3>
       <div class="form-grid">
-        <label><span>维度</span><select id="nbDim"><option value="total">月度总额</option><option value="category">类别</option><option value="nature">固定/灵活/偶发</option></select></label>
-        <label><span>对象</span><select id="nbTarget"></select></label>
-        <label><span>金额（CAD / 月）</span><input type="number" id="nbAmt" step="1" min="0" placeholder="0"></label>
+        <label><span>Dimension</span><select id="nbDim"><option value="total">Monthly Total</option><option value="category">Category</option><option value="nature">Fixed / Flexible / One-off</option></select></label>
+        <label><span>Target</span><select id="nbTarget"></select></label>
+        <label><span>Amount (CAD / month)</span><input type="number" id="nbAmt" step="1" min="0" placeholder="0"></label>
       </div>
-      <button class="btn small" id="nbAdd">添加预算</button>
+      <button class="btn small" id="nbAdd">Add Budget</button>
       <span class="msg" id="nbMsg"></span>
     </div>
   </section>
 
-  <!-- ================= 导入 / 同步 ================= -->
+  <!-- ================= Import / Sync ================= -->
   <section class="panel" id="panel-sync">
     <div class="card">
-      <h2>导入随手记历史</h2>
-      <p class="hint">四步：选文件 → 自动识别表头与字段 → 预览统计 → 确认导入。兼容随手记专业版导出：自动跳过第一行说明行、识别第二行表头、支持 GBK 编码与两级分类（类别 + 子类别）。只导入收入 + 支出；转账成对跳过（不算收支）、余额变更 / 负债变更跳过（避免打乱收支，之后单独对期初余额）；按日期 + 金额 + 备注去重；「私家车费用」按备注含「加油」自动分流到加油 / 汽车保养维修。</p>
+      <h2>Import Suishouji History</h2>
+      <p class="hint">Four steps: pick a file, auto-detect headers and fields, preview stats, then confirm import. Compatible with Suishouji Professional exports: skips the first description row, detects headers on row 2, supports GBK encoding and two-level categories (category + subcategory). Imports income and expenses only; transfers are skipped in pairs, balance changes and liability changes are skipped (reconcile opening balances separately); deduplicates by date + amount + note; Car Expenses are auto-split into Gas and Car Maintenance based on the note.</p>
       <div class="filebox">
-        选择随手记导出的 CSV 文件（也支持本工具导出的 JSON 数据文件）
+        Choose a Suishouji CSV export (or a JSON data file exported from this tool)
         <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json">
       </div>
       <div id="importPreview" style="margin-top:12px"></div>
     </div>
     <div class="card">
-      <h2>OneDrive 直连同步 <span class="pill">自动</span></h2>
-      <p class="hint">连接一次微软账号后：打开时自动拉取云端最新数据并合并，记账后自动推送到 OneDrive <b>Finance/finance-data.json</b>；页面打开后离线记账照常可用，新记的账进本机队列并标「待同步」，联网后自动补推。登录状态与令牌只存本机浏览器，不经过任何服务器。连接步骤在「安装 / 连接」页。</p>
+      <h2>OneDrive Direct Sync <span class="pill">Automatic</span></h2>
+      <p class="hint">Once you connect your Microsoft account: the app pulls and merges the latest cloud data on open, and pushes automatically to OneDrive <b>Finance/finance-data.json</b> after each entry. You can keep bookkeeping offline while the page is open — new entries queue locally as Pending and push automatically when you are back online. Sign-in state and tokens are stored only in your browser and never pass through any server. Setup steps are in the Install / Connect tab.</p>
       <div class="kv">
-        <div><span>数据文件</span><b>OneDrive · Finance/finance-data.json</b></div>
-        <div><span>投资表副本</span><b>Finance/Investment &amp; Registered Accounts Tracker.xlsx</b></div>
-        <div><span>OneDrive 容量</span><b>100 GB 总量，约 97 GB 可用</b></div>
-        <div><span>合并规则</span><b>按修改时间合并，同笔按日期+金额+备注去重</b></div>
+        <div><span>Data File</span><b>OneDrive · Finance/finance-data.json</b></div>
+        <div><span>Investment Tracker Copy</span><b>Finance/Investment &amp; Registered Accounts Tracker.xlsx</b></div>
+        <div><span>OneDrive Storage</span><b>100 GB total, about 97 GB free</b></div>
+        <div><span>Merge Rule</span><b>Merge by modified time; deduplicate by date, amount, and note</b></div>
       </div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" id="btnConnect2">连接 OneDrive</button>
-        <button class="btn ghost" id="btnSyncNow2">立即同步</button>
-        <button class="btn ghost" id="btnDisconnect" style="display:none">断开连接</button>
+        <button class="btn" id="btnConnect2">Connect OneDrive</button>
+        <button class="btn ghost" id="btnSyncNow2">Sync Now</button>
+        <button class="btn ghost" id="btnDisconnect" style="display:none">Disconnect</button>
       </div>
-      <p class="hint" style="margin-top:10px">手动兜底（直连不可用时）：导出数据文件存回 OneDrive 的 Finance 文件夹，或在新设备上用上面的导入框选那份 JSON 恢复。</p>
-      <button class="btn ghost" id="btnExport">导出数据文件 (finance-data.json)</button>
+      <p class="hint" style="margin-top:10px">Manual fallback (if direct sync is not available): export the data file back to the Finance folder in OneDrive, or use the import box above on a new device to restore from that JSON.</p>
+      <button class="btn ghost" id="btnExport">Export Data File (finance-data.json)</button>
       <span class="msg" id="exportMsg"></span>
     </div>
     <div class="card">
-      <h2>银行对接说明</h2>
-      <p class="hint">TD、Rogers、CIBC、Scotia 暂无法通过 Plaid 直连自动同步（Plaid 在当前账号地区不提供服务，与密码或授权无关）。现行办法：每月从各家网银下载 CSV 账单，用上面同一个导入入口导进来；随手记继续记账、定期导出导入也是同一条路。</p>
+      <h2>About Bank Connections</h2>
+      <p class="hint">TD, Rogers, CIBC, and Scotia cannot auto-sync via Plaid right now (Plaid does not offer service in this account region — it is not a password or authorization issue). Current approach: download CSV statements from each bank monthly and import them through the same import box above. Continuing with Suishouji and importing its exports regularly follows the same path.</p>
     </div>
   </section>
 
-  <!-- ================= 安装 / 连接 ================= -->
+  <!-- ================= Install / Connect ================= -->
   <section class="panel" id="panel-setup">
     <div class="card">
-      <h2>装到桌面（像 App 一样打开）</h2>
-      <p class="hint">先用手机或电脑的浏览器打开本页的公开链接，再按下面对应设备的步骤装一次。装好后从桌面图标打开是全屏独立窗口，不用再进 Muse。要说清楚的是：当前托管方式下离线缓存管不到页面本身（顶部状态栏「离线外壳」一项会如实显示），所以完全断网冷启动仍需联网加载一次页面；页面打开后断网可以照常记账，数据都存本机，联网后自动同步回 OneDrive。</p>
-      <button class="btn" id="btnInstall">安装到桌面</button>
+      <h2>Add to Home Screen (Open Like an App)</h2>
+      <p class="hint">Open the public link for this page in your phone or computer browser first, then follow the steps for your device below to install it once. After that, opening from the home-screen icon gives you a full-screen standalone window — no need to go through Muse. To be clear: with the current hosting, the offline cache cannot cover the page itself (the Offline Shell item in the status bar shows this honestly), so a fully offline cold start still needs network to load the page once. Once the page is open you can bookkeep offline — data is stored locally and syncs back to OneDrive when you reconnect.</p>
+      <button class="btn" id="btnInstall">Install to Home Screen</button>
       <span class="msg" id="installMsg"></span>
       <div class="platgrid">
-        <div class="plat"><b>iPhone / iPad（Safari）</b>
-          <p>1. 用 Safari 打开公开链接<br>2. 点底部分享按钮（方框带上箭头）<br>3. 选「添加到主屏幕」→「添加」<br>4. 以后从桌面图标打开，不要在 Muse 里开</p></div>
-        <div class="plat"><b>Android（Chrome）</b>
-          <p>1. 用 Chrome 打开公开链接<br>2. 点右上角 ⋮ 菜单<br>3. 选「安装应用」/「添加到主屏幕」<br>4. 确认安装，桌面会出现图标</p></div>
-        <div class="plat"><b>Windows（Edge / Chrome）</b>
-          <p>1. 用 Edge 或 Chrome 打开公开链接<br>2. 点地址栏右侧的安装图标（显示器带下箭头），或菜单里选「将此站安装为应用」<br>3. 装好后开始菜单 / 桌面都有入口，可固定到任务栏</p></div>
+        <div class="plat"><b>iPhone / iPad (Safari)</b>
+          <p>1. Open the public link in Safari<br>2. Tap the Share button at the bottom (square with up arrow)<br>3. Choose Add to Home Screen, then Add<br>4. Open from the home-screen icon from now on</p></div>
+        <div class="plat"><b>Android (Chrome)</b>
+          <p>1. Open the public link in Chrome<br>2. Tap the menu in the top right<br>3. Choose Install app / Add to Home screen<br>4. Confirm — an icon will appear on your home screen</p></div>
+        <div class="plat"><b>Windows (Edge / Chrome)</b>
+          <p>1. Open the public link in Edge or Chrome<br>2. Click the install icon at the right of the address bar, or choose Install this site as an app from the menu<br>3. After installing, use the Start menu or desktop shortcut; you can pin it to the taskbar</p></div>
       </div>
-      <p class="hint" style="margin-top:10px">小提醒：从桌面图标打开仍需要网络加载页面（离线外壳暂未覆盖页面，见顶部状态栏）；页面打开后断网可继续记账，新记录存本机、联网后自动补同步。重要数据始终以 OneDrive 里的 finance-data.json 为准。</p>
+      <p class="hint" style="margin-top:10px">Tip: Opening from the home-screen icon still needs network to load the page (the offline shell does not cover the page yet — see the status bar). Once open, you can bookkeep offline; new entries are stored locally and sync automatically when you reconnect. The finance-data.json file in OneDrive is always the source of truth.</p>
     </div>
 
     <div class="card">
-      <h2>连接 OneDrive（只需设置一次）</h2>
-      <p class="hint">本页用微软官方登录（MSAL，浏览器端 PKCE，无密钥）直连你的 OneDrive，只读写 Finance 文件夹里的 finance-data.json 一个文件。沿用已有的 Azure 应用「Muse OneDrive」，但要先给这个网页补一个跳转地址：</p>
+      <h2>Connect OneDrive (One-time Setup)</h2>
+      <p class="hint">This page connects directly to your OneDrive using Microsoft official sign-in (MSAL, browser PKCE, no secrets) and only reads and writes the single finance-data.json file in the Finance folder. It reuses the existing Azure app Muse OneDrive, but you need to add a redirect URI for this web page first:</p>
       <ol class="steps">
-        <li>打开 Azure 门户 →「应用注册」→ 找到应用 <b>Muse OneDrive</b>（应用 ID <code>cff5bc5e-6954-419f-924a-e7bcf81fc853</code>）。</li>
-        <li>进「Authentication（身份验证）」→「Add a platform（添加平台）」→ 选 <b>Single-page application（单页应用程序）</b>。注意不要加到已有的 Mobile and desktop 平台里，那是给 Muse 服务端用的。</li>
-        <li>跳转 URI 就填下面这一条（与本页代码里配置的登录跳转地址逐字一致，不要改成只填域名）：<br><code>https://mmmjp92.github.io/finance-pwa/</code><br>保存。以后连接 OneDrive 都从这个公开链接打开本页，登录才能对上。</li>
-        <li>回到本页点下面的「连接 OneDrive」，用你的微软账号登录并同意 Files.ReadWrite 权限。</li>
-        <li>连接成功后会自动完成第一次同步：拉取云端 finance-data.json 合并，再把合并结果推回云端。之后打开自动拉、记账自动推，不用再管。</li>
+        <li>Open the Azure Portal, go to App registrations, and find the app <b>Muse OneDrive</b> (App ID <code>cff5bc5e-6954-419f-924a-e7bcf81fc853</code>).</li>
+        <li>Go to Authentication, Add a platform, and choose <b>Single-page application</b>. Do not add it to the existing Mobile and desktop platform — that one is for the Muse server.</li>
+        <li>Use exactly this redirect URI (it must match the sign-in redirect in this page code character-for-character — do not shorten it to just the domain):<br><code>https://mmmjp92.github.io/finance-pwa/</code><br>Save. From now on, always open this page from this public link when connecting OneDrive, so sign-in matches.</li>
+        <li>Come back to this page, click Connect OneDrive below, sign in with your Microsoft account, and consent to Files.ReadWrite.</li>
+        <li>After connecting, the first sync runs automatically: it pulls the cloud finance-data.json, merges it, and pushes the merged result back. After that it pulls on open and pushes after each entry.</li>
       </ol>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" id="btnConnect">连接 OneDrive</button>
-        <button class="btn ghost" id="btnGotoSync">去看同步与导入</button>
+        <button class="btn" id="btnConnect">Connect OneDrive</button>
+        <button class="btn ghost" id="btnGotoSync">Go to Sync and Import</button>
       </div>
       <div class="msg" id="connectMsg"></div>
-      <p class="hint" style="margin-top:8px">如果点连接后微软报错 AADSTS50011（redirect URI mismatch），就是第 3 步的地址还没加或没保存，按上面补好再试；这一步只能在你的 Azure 门户里做，网页自己改不了。</p>
+      <p class="hint" style="margin-top:8px">If Microsoft returns AADSTS50011 (redirect URI mismatch) after you click Connect, the URI in step 3 has not been added or saved yet — add it as above and try again. This step can only be done in your Azure Portal; the web page cannot change it for you.</p>
     </div>
   </section>
 
   <footer>
-    金额均为 CAD，除非标注 USD。数据保存在本机并同步到 OneDrive 的 finance-data.json；离线记账联网后自动补同步。预置账户余额为 CAD $0，导入随手记历史（2,151 条收支）或手动对账后更新。
+    All amounts are in CAD unless marked USD. Data is stored locally and synced to finance-data.json in OneDrive; offline entries sync automatically when you are back online. Preset balances start at CAD $0 and update after you import Suishouji history (2,151 records) or reconcile manually.
   </footer>
 </div>
 
 <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 <script>
 "use strict";
-/* ==================== 数据 ==================== */
+/* ==================== Data ==================== */
 var CATS = [
-  {g:"住房", subs:[["房租","fixed"],["水电煤气","fixed"],["物业保险","fixed"],["维修保养","once"]]},
-  {g:"饮食", subs:[["早午晚餐","flex"],["超市买菜","flex"],["烟酒茶饮料","flex"]]},
-  {g:"购物", subs:[["日常购物","flex"],["鞋帽包包","flex"],["数码装备","once"]]},
-  {g:"交通", subs:[["加油","flex"],["汽车保养维修","once"],["车保","fixed"],["公共交通/打车","flex"]]},
-  {g:"通讯订阅", subs:[["手机费","fixed"],["上网费","fixed"],["订阅费","fixed"]]},
-  {g:"休闲旅游", subs:[["旅游度假","once"],["休闲玩乐","flex"]]},
-  {g:"医疗健康", subs:[["治疗费","once"],["药品费","flex"]]},
-  {g:"人情金融", subs:[["送礼请客","flex"],["银行手续","once"]]},
-  {g:"其他支出", subs:[["其他支出","once"]]}
+  {g:"Housing", subs:[["Rent","fixed"],["Utilities","fixed"],["Property Insurance","fixed"],["Maintenance and Repairs","once"]]},
+  {g:"Food and Dining", subs:[["Meals Out","flex"],["Groceries","flex"],["Drinks and Tobacco","flex"]]},
+  {g:"Shopping", subs:[["Everyday Shopping","flex"],["Clothing and Accessories","flex"],["Electronics","once"]]},
+  {g:"Transportation", subs:[["Gas","flex"],["Car Maintenance","once"],["Car Insurance","fixed"],["Transit and Rideshare","flex"]]},
+  {g:"Communications and Subscriptions", subs:[["Phone Bill","fixed"],["Internet Bill","fixed"],["Subscriptions","fixed"]]},
+  {g:"Leisure and Travel", subs:[["Travel and Vacation","once"],["Entertainment","flex"]]},
+  {g:"Health and Medical", subs:[["Medical Treatment","once"],["Pharmacy and Medication","flex"]]},
+  {g:"Social and Finance", subs:[["Gifts and Hosting","flex"],["Bank Fees","once"]]},
+  {g:"Other Expenses", subs:[["Other Expenses","once"]]}
 ];
-var INCOME_CATS = [["工资收入","fixed"],["利息收入","once"],["其他收入","once"],["意外来钱","once"],["礼金","once"],["退税","once"]];
-var NATURE_NAME = {fixed:"固定", flex:"灵活", once:"偶发"};
+var INCOME_CATS = [["Salary Income","fixed"],["Interest Income","once"],["Other Income","once"],["Windfall","once"],["Gift Money","once"],["Tax Refund","once"]];
+var NATURE_NAME = {fixed:"Fixed", flex:"Flexible", once:"One-off"};
 
 var accounts = [
-  {id:"td-cheq", name:"TD Chequing", kind:"银行 · 支票", ccy:"CAD", bal:0, virtual:false, archived:false},
-  {id:"rogers", name:"Rogers Master", kind:"信用卡", ccy:"CAD", bal:0, virtual:false, archived:false},
-  {id:"td-cb", name:"TD Cash Back", kind:"信用卡", ccy:"CAD", bal:0, virtual:false, archived:false},
-  {id:"cibc", name:"CIBC Costco Master", kind:"信用卡", ccy:"CAD", bal:0, virtual:false, archived:false},
-  {id:"cash-cad", name:"现金加币", kind:"现金", ccy:"CAD", bal:0, virtual:false, archived:false},
-  {id:"cash-usd", name:"现金美元", kind:"现金", ccy:"USD", bal:0, virtual:false, archived:false},
-  {id:"tfsa", name:"TD TFSA", kind:"投资 · 注册账户", ccy:"CAD", bal:28245, virtual:false, archived:false},
-  {id:"fhsa", name:"TD FHSA", kind:"投资 · 未注资", ccy:"CAD", bal:0, virtual:false, archived:false},
-  {id:"rent", name:"TD for Rent", kind:"虚拟 · 房租预留", ccy:"CAD", bal:0, virtual:true, archived:false},
-  {id:"tolili", name:"TD to Lili", kind:"虚拟 · 预留", ccy:"CAD", bal:0, virtual:true, archived:false},
-  {id:"scotia-c", name:"Scotia Chequing", kind:"银行（旧）", ccy:"CAD", bal:0, virtual:false, archived:true},
-  {id:"scotia-s", name:"Scotia Saving", kind:"银行（旧）", ccy:"CAD", bal:0, virtual:false, archived:true},
-  {id:"icbc-c", name:"工行 Chequing", kind:"银行（旧）", ccy:"CAD", bal:0, virtual:false, archived:true},
-  {id:"icbc-s", name:"工行 Saving", kind:"银行（旧）", ccy:"CAD", bal:0, virtual:false, archived:true}
+  {id:"td-cheq", name:"TD Chequing", kind:"Bank - Chequing", ccy:"CAD", bal:0, virtual:false, archived:false},
+  {id:"rogers", name:"Rogers Master", kind:"Credit Card", ccy:"CAD", bal:0, virtual:false, archived:false},
+  {id:"td-cb", name:"TD Cash Back", kind:"Credit Card", ccy:"CAD", bal:0, virtual:false, archived:false},
+  {id:"cibc", name:"CIBC Costco Master", kind:"Credit Card", ccy:"CAD", bal:0, virtual:false, archived:false},
+  {id:"cash-cad", name:"Cash CAD", kind:"Cash", ccy:"CAD", bal:0, virtual:false, archived:false},
+  {id:"cash-usd", name:"Cash USD", kind:"Cash", ccy:"USD", bal:0, virtual:false, archived:false},
+  {id:"tfsa", name:"TD TFSA", kind:"Investment - Registered", ccy:"CAD", bal:28245, virtual:false, archived:false},
+  {id:"fhsa", name:"TD FHSA", kind:"Investment - Unfunded", ccy:"CAD", bal:0, virtual:false, archived:false},
+  {id:"rent", name:"TD for Rent", kind:"Virtual - Rent Reserve", ccy:"CAD", bal:0, virtual:true, archived:false},
+  {id:"tolili", name:"TD to Lili", kind:"Virtual - Reserve", ccy:"CAD", bal:0, virtual:true, archived:false},
+  {id:"scotia-c", name:"Scotia Chequing", kind:"Bank (Old)", ccy:"CAD", bal:0, virtual:false, archived:true},
+  {id:"scotia-s", name:"Scotia Saving", kind:"Bank (Old)", ccy:"CAD", bal:0, virtual:false, archived:true},
+  {id:"icbc-c", name:"ICBC Chequing", kind:"Bank (Old)", ccy:"CAD", bal:0, virtual:false, archived:true},
+  {id:"icbc-s", name:"ICBC Saving", kind:"Bank (Old)", ccy:"CAD", bal:0, virtual:false, archived:true}
 ];
 var holdings = [
-  {name:"TFSA GIC（2026-10）", type:"GIC", detail:"本金 CAD $16,245", rate:"3.10%", note:"2026-10-09 → 2027-10-09", maturity:"2027-10-09", value:16245},
-  {name:"TFSA GIC（2026-01）", type:"GIC", detail:"本金 CAD $7,000", rate:"2.75%", note:"2026-01-19 → 2027-03-20", maturity:"2027-03-20", value:7000},
-  {name:"TDB887 平衡增长基金", type:"基金", detail:"194.856 份", rate:"买入净值 $25.66 · MER 2.02%", note:"分红再投资 · 2026-10-19 成交", maturity:null, value:5000}
+  {name:"TFSA GIC (Oct 2026)", type:"GIC", detail:"Principal CAD $16,245", rate:"3.10%", note:"2026-10-09 → 2027-10-09", maturity:"2027-10-09", value:16245},
+  {name:"TFSA GIC (Jan 2026)", type:"GIC", detail:"Principal CAD $7,000", rate:"2.75%", note:"2026-01-19 → 2027-03-20", maturity:"2027-03-20", value:7000},
+  {name:"TDB887 Balanced Growth Fund", type:"Fund", detail:"194.856 units", rate:"Purchase NAV $25.66 - MER 2.02%", note:"Distributions reinvested - Traded 2026-10-19", maturity:null, value:5000}
 ];
 var merchants = [
-  ["No Frills","超市买菜"],["Costco","超市买菜"],["大统华 T&T","超市买菜"],["Walmart 沃尔玛","超市买菜"],
-  ["Food Basics","超市买菜"],["FreshCo","超市买菜"],["Metro","超市买菜"],["RCSS","超市买菜"],
-  ["Dollarama","日常购物"],["IKEA 宜家","日常购物"],["新华都","超市买菜"],["信达","超市买菜"],
-  ["Adonis","超市买菜"],["Domino's","早午晚餐"],["Popeyes","早午晚餐"],["Petro-Canada 加油站","加油"],
-  ["Esso 加油站","加油"],["Rogers","手机费"],["Fido","手机费"],["iCloud+","订阅费"],["Claude Pro","订阅费"]
+  ["No Frills","Groceries"],["Costco","Groceries"],["T&T Supermarket","Groceries"],["Walmart","Groceries"],
+  ["Food Basics","Groceries"],["FreshCo","Groceries"],["Metro","Groceries"],["RCSS","Groceries"],
+  ["Dollarama","Everyday Shopping"],["IKEA","Everyday Shopping"],["Xinhuadu","Groceries"],["Xinda","Groceries"],
+  ["Adonis","Groceries"],["Domino's","Meals Out"],["Popeyes","Meals Out"],["Petro-Canada Gas Station","Gas"],
+  ["Esso Gas Station","Gas"],["Rogers","Phone Bill"],["Fido","Phone Bill"],["iCloud+","Subscriptions"],["Claude Pro","Subscriptions"]
 ].map(function(m){return {name:m[0], cat:m[1]};});
 
 var templates = [
-  {name:"房租", type:"expense", cat:"房租", amt:2100, acct:"rent", merchant:"", note:"房租"},
-  {name:"预留房租（转账）", type:"transfer", cat:"", amt:2100, acct:"td-cheq", to:"rent", merchant:"", note:"预留房租"},
-  {name:"工资收入", type:"income", cat:"工资收入", amt:null, acct:"td-cheq", merchant:"", note:"工资"},
-  {name:"加油", type:"expense", cat:"加油", amt:null, acct:"rogers", merchant:"Petro-Canada 加油站", note:"加油"},
-  {name:"超市买菜", type:"expense", cat:"超市买菜", amt:null, acct:"rogers", merchant:"No Frills", note:"超市买菜"},
-  {name:"早午晚餐", type:"expense", cat:"早午晚餐", amt:null, acct:"rogers", merchant:"", note:""},
-  {name:"手机费", type:"expense", cat:"手机费", amt:null, acct:"td-cb", merchant:"Rogers", note:"手机费"},
-  {name:"网费", type:"expense", cat:"上网费", amt:null, acct:"td-cb", merchant:"", note:"上网费"},
-  {name:"车险", type:"expense", cat:"车保", amt:null, acct:"td-cb", merchant:"", note:"车险"},
-  {name:"订阅费", type:"expense", cat:"订阅费", amt:null, acct:"td-cb", merchant:"iCloud+", note:"订阅"},
-  {name:"日常购物", type:"expense", cat:"日常购物", amt:null, acct:"cibc", merchant:"Costco", note:""},
-  {name:"还 Rogers Master", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"rogers", merchant:"", note:"还信用卡"},
-  {name:"还 TD Cash Back", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"td-cb", merchant:"", note:"还信用卡"},
-  {name:"还 CIBC Costco", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"cibc", merchant:"", note:"还信用卡"}
+  {name:"Rent", type:"expense", cat:"Rent", amt:2100, acct:"rent", merchant:"", note:"Rent"},
+  {name:"Reserve Rent (Transfer)", type:"transfer", cat:"", amt:2100, acct:"td-cheq", to:"rent", merchant:"", note:"Reserve rent"},
+  {name:"Salary Income", type:"income", cat:"Salary Income", amt:null, acct:"td-cheq", merchant:"", note:"Salary"},
+  {name:"Gas", type:"expense", cat:"Gas", amt:null, acct:"rogers", merchant:"Petro-Canada Gas Station", note:"Gas"},
+  {name:"Groceries", type:"expense", cat:"Groceries", amt:null, acct:"rogers", merchant:"No Frills", note:"Groceries"},
+  {name:"Meals Out", type:"expense", cat:"Meals Out", amt:null, acct:"rogers", merchant:"", note:""},
+  {name:"Phone Bill", type:"expense", cat:"Phone Bill", amt:null, acct:"td-cb", merchant:"Rogers", note:"Phone bill"},
+  {name:"Internet", type:"expense", cat:"Internet Bill", amt:null, acct:"td-cb", merchant:"", note:"Internet bill"},
+  {name:"Car Insurance", type:"expense", cat:"Car Insurance", amt:null, acct:"td-cb", merchant:"", note:"Car insurance"},
+  {name:"Subscriptions", type:"expense", cat:"Subscriptions", amt:null, acct:"td-cb", merchant:"iCloud+", note:"Subscription"},
+  {name:"Everyday Shopping", type:"expense", cat:"Everyday Shopping", amt:null, acct:"cibc", merchant:"Costco", note:""},
+  {name:"Pay Rogers Master", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"rogers", merchant:"", note:"Pay credit card"},
+  {name:"Pay TD Cash Back", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"td-cb", merchant:"", note:"Pay credit card"},
+  {name:"Pay CIBC Costco", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"cibc", merchant:"", note:"Pay credit card"}
 ];
 var budgets = [
-  {dim:"total", target:"本月总支出", amt:3200},
-  {dim:"category", target:"饮食", amt:900},
-  {dim:"category", target:"交通", amt:450},
+  {dim:"total", target:"Monthly Total", amt:3200},
+  {dim:"category", target:"Food and Dining", amt:900},
+  {dim:"category", target:"Transportation", amt:450},
   {dim:"nature", target:"fixed", amt:2600},
   {dim:"nature", target:"flex", amt:1200},
   {dim:"nature", target:"once", amt:400}
 ];
-var txns = []; /* 本次打开期间新增/导入的记录 */
+var txns = []; /* Records added/imported during this session */
 var seq = 1;
 
-/* ==================== 本机持久化 ==================== */
-/* 数据只存本机浏览器（关掉重开、断网都能接着用），并同步到 OneDrive。
-   baseBals 是不依赖流水的期初余额（如 TFSA 本金），重算余额时作底。 */
+/* ==================== Local Persistence ==================== */
+/* Data is stored only in the local browser (survives closing, reopening, and offline use) and synced to OneDrive.
+   baseBals are opening balances independent of transactions (e.g., TFSA principal), used as the base when recomputing balances. */
 var LS_KEY = "finance-pwa-state-v1";
 var baseBals = {};
 accounts.forEach(function(a){ baseBals[a.id] = a.bal; });
-var lastSyncAt = 0;        /* 上次成功同步时间戳 ms */
-var deletedKeys = [];      /* 已删除记录的墓碑 {key, deletedAt}，随同步传播 */
-var settingsDirty = false; /* 预算/模板/商户等非流水改动待同步标记 */
+var lastSyncAt = 0;        /* Last successful sync timestamp (ms) */
+var deletedKeys = [];      /* Tombstones for deleted records {key, deletedAt}, propagated via sync */
+var settingsDirty = false; /* Flag for non-transaction changes (budgets/templates/merchants) pending sync */
 function dedupeKey(t){ return t.date + "|" + t.amt + "|" + (t.note || ""); }
 function saveLocal(){
   try{
@@ -548,7 +548,7 @@ function saveLocal(){
       templates:templates, holdings:holdings, seq:seq, baseBals:baseBals,
       lastSyncAt:lastSyncAt, deletedKeys:deletedKeys
     }));
-  }catch(e){ /* 存储不可用时退化为仅内存，不阻断记账 */ }
+  }catch(e){ /* If storage is unavailable, fall back to memory only; do not block bookkeeping */ }
 }
 function loadLocal(){
   try{
@@ -571,14 +571,14 @@ function loadLocal(){
 }
 loadLocal();
 
-/* ==================== 工具 ==================== */
+/* ==================== Utilities ==================== */
 function $(id){return document.getElementById(id);}
 function fmt(n){return "CAD $" + Number(n).toLocaleString("en-CA",{minimumFractionDigits:2, maximumFractionDigits:2});}
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function catGroup(sub){
   for(var i=0;i<CATS.length;i++){for(var j=0;j<CATS[i].subs.length;j++){if(CATS[i].subs[j][0]===sub)return CATS[i].g;}}
-  return "其他";
+  return "Other Expenses";
 }
 function catNature(sub){
   for(var i=0;i<CATS.length;i++){for(var j=0;j<CATS[i].subs.length;j++){if(CATS[i].subs[j][0]===sub)return CATS[i].subs[j][1];}}
@@ -601,7 +601,7 @@ function gotoTab(name){
   window.scrollTo({top:0, behavior:"smooth"});
 }
 
-/* ==================== 下拉填充 ==================== */
+/* ==================== Dropdown Population ==================== */
 function fillCatSelect(sel, kind){
   var html="";
   if(kind!=="income"){
@@ -612,7 +612,7 @@ function fillCatSelect(sel, kind){
     });
   }
   if(kind!=="expense"){
-    html+='<optgroup label="收入">';
+    html+='<optgroup label="Income">';
     INCOME_CATS.forEach(function(s){html+='<option value="'+esc(s[0])+'">'+esc(s[0])+"</option>";});
     html+="</optgroup>";
   }
@@ -620,7 +620,7 @@ function fillCatSelect(sel, kind){
 }
 function fillAcctSelect(sel, includeVirtual){
   sel.innerHTML=accounts.filter(function(a){return !a.archived && (includeVirtual||!a.virtual);})
-    .map(function(a){return '<option value="'+a.id+'">'+esc(a.name)+(a.virtual?"（虚拟）":"")+"</option>";}).join("");
+    .map(function(a){return '<option value="'+a.id+'">'+esc(a.name)+(a.virtual?" (Virtual)":"")+"</option>";}).join("");
 }
 function refreshFormSelects(){
   fillCatSelect($("fCat"), curType==="income"?"income":"expense");
@@ -631,13 +631,13 @@ function refreshFormSelects(){
   fillAcctSelect($("tFrom"), true);
   fillAcctSelect($("tTo"), true);
   var q=$("qCat"); var cur=q.value;
-  q.innerHTML='<option value="">全部类别</option>'+CATS.map(function(c){return '<option value="'+esc(c.g)+'">'+esc(c.g)+"</option>";}).join("");
+  q.innerHTML='<option value="">All Categories</option>'+CATS.map(function(c){return '<option value="'+esc(c.g)+'">'+esc(c.g)+"</option>";}).join("");
   q.value=cur;
   $("merchantList").innerHTML=merchants.map(function(m){return '<option value="'+esc(m.name)+'">';}).join("");
   fillBudgetTargets();
 }
 
-/* ==================== 总览计算 ==================== */
+/* ==================== Overview Calculations ==================== */
 function monthKey(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");}
 function monthStats(){
   var mk=monthKey(), inc=0, exp=0;
@@ -664,53 +664,53 @@ function spentFor(b){
 function renderSummary(){
   var invest=holdings.reduce(function(s,h){return s+h.value;},0);
   var real=accounts.filter(function(a){return !a.virtual && !a.archived;}).reduce(function(s,a){return s+a.bal;},0);
-  var avail=accounts.filter(function(a){return !a.virtual && !a.archived && a.kind.indexOf("投资")!==0;}).reduce(function(s,a){return s+a.bal;},0);
+  var avail=accounts.filter(function(a){return !a.virtual && !a.archived && a.kind.indexOf("Investment")!==0;}).reduce(function(s,a){return s+a.bal;},0);
   var reserved=accounts.filter(function(a){return a.virtual;}).reduce(function(s,a){return s+a.bal;},0);
-  var nw=real; /* 净资产不含虚拟预留 */
+  var nw=real; /* Net worth excludes virtual reserves */
   $("nwValue").textContent=fmt(nw);
   $("stAvail").textContent=fmt(avail);
   $("stReserved").textContent=fmt(reserved);
   $("stInvest").textContent=fmt(invest);
   var ms=monthStats();
   $("stMonth").textContent=((ms.inc-ms.exp)>=0?"+ ":"− ")+fmt(Math.abs(ms.inc-ms.exp));
-  $("stMonthNote").textContent="本月收入 "+fmt(ms.inc)+" · 支出 "+fmt(ms.exp);
+  $("stMonthNote").textContent="This month: Income "+fmt(ms.inc)+" - Expenses "+fmt(ms.exp);
 }
 function budgetRowHTML(b, editable){
   var spent=spentFor(b), pct=b.amt>0?Math.min(100, Math.round(spent/b.amt*100)):0;
   var cls=spent>b.amt?"over":(pct>=80?"warn":"");
-  var label=b.dim==="total"?"月度总额":(b.dim==="nature"?("性质 · "+NATURE_NAME[b.target]):("类别 · "+b.target));
-  var over=spent>b.amt?' <span class="pill" style="background:var(--red-soft);color:var(--red)">超支 '+fmt(spent-b.amt)+"</span>":"";
+  var label=b.dim==="total"?"Monthly Total":(b.dim==="nature"?("Nature - "+NATURE_NAME[b.target]):("Category - "+b.target));
+  var over=spent>b.amt?' <span class="pill" style="background:var(--red-soft);color:var(--red)">Over by '+fmt(spent-b.amt)+"</span>":"";
   return '<div class="brow"><div class="head"><span>'+esc(label)+over+'</span><span>'+fmt(spent)+' / '+fmt(b.amt)+'</span></div>'+
     '<div class="bar"><i class="'+cls+'" style="width:'+pct+'%"></i></div>'+
-    '<div class="sub">已用 '+pct+'%'+(editable?' · <a href="#" data-budget-edit="'+esc(b.dim+"|"+b.target)+'">改金额</a>':'')+'</div></div>';
+    '<div class="sub">Used '+pct+'%'+(editable?' · <a href="#" data-budget-edit="'+esc(b.dim+"|"+b.target)+'">Edit amount</a>':'')+'</div></div>';
 }
 function renderBudgets(){
-  $("homeBudgets").innerHTML=budgets.slice(0,4).map(function(b){return budgetRowHTML(b,false);}).join("") || '<div class="empty">还没有预算</div>';
+  $("homeBudgets").innerHTML=budgets.slice(0,4).map(function(b){return budgetRowHTML(b,false);}).join("") || '<div class="empty">No budgets yet</div>';
   $("budgetList").innerHTML=budgets.map(function(b){return budgetRowHTML(b,true);}).join("");
   document.querySelectorAll("[data-budget-edit]").forEach(function(a){
     a.addEventListener("click",function(e){
       e.preventDefault();
       var parts=a.getAttribute("data-budget-edit").split("|");
-      budgets.forEach(function(b){ if(b.dim===parts[0]&&b.target===parts[1]){ $("nbDim").value=b.dim; fillBudgetTargets(); $("nbTarget").value=b.target; $("nbAmt").value=b.amt; $("nbMsg").textContent="已带入「"+b.target+"」，改金额后点添加即更新。"; $("nbMsg").className="msg"; }});
+      budgets.forEach(function(b){ if(b.dim===parts[0]&&b.target===parts[1]){ $("nbDim").value=b.dim; fillBudgetTargets(); $("nbTarget").value=b.target; $("nbAmt").value=b.amt; $("nbMsg").textContent="Loaded "+b.target+" - change the amount and click Add to update."; $("nbMsg").className="msg"; }});
     });
   });
 }
 function txnHTML(t){
   var sign, cls, typeName;
-  if(t.type==="income"){sign="+";cls="pos";typeName="收入";}
-  else if(t.type==="refund"){sign="+";cls="pos";typeName="退款";}
-  else if(t.type==="transfer"){sign="";cls="";typeName="转账";}
-  else {sign="−";cls="neg";typeName="支出";}
+  if(t.type==="income"){sign="+";cls="pos";typeName="Income";}
+  else if(t.type==="refund"){sign="+";cls="pos";typeName="Refund";}
+  else if(t.type==="transfer"){sign="";cls="";typeName="Transfer";}
+  else {sign="−";cls="neg";typeName="Expense";}
   var title, meta;
   if(t.type==="transfer"){
     title=acctName(t.fromAcct)+" → "+acctName(t.toAcct);
-    meta=t.date+" · 转账"+(t.amtIn&&t.amtIn!==t.amt?" · 跨币种":"")+(t.note?" · "+esc(t.note):"");
+    meta=t.date+" - Transfer"+(t.amtIn&&t.amtIn!==t.amt?" - Cross-currency":"")+(t.note?" · "+esc(t.note):"");
     var amtTxt=fmt(t.amt)+(t.amtIn&&t.amtIn!==t.amt?" → "+fmt(t.amtIn):"");
-    return '<div class="txn"><div class="grow"><b>'+esc(title)+'</b><div class="meta">'+meta+'</div></div><div class="amt">'+amtTxt+'</div><button class="del" data-del="'+t.id+'">删除</button></div>';
+    return '<div class="txn"><div class="grow"><b>'+esc(title)+'</b><div class="meta">'+meta+'</div></div><div class="amt">'+amtTxt+'</div><button class="del" data-del="'+t.id+'">Delete</button></div>';
   }
   title=(t.merchant?esc(t.merchant)+" · ":"")+esc(t.cat);
-  meta=t.date+" · "+typeName+" · "+esc(acctName(t.acct))+(t.note?" · "+esc(t.note):"")+(t.linkedTo?" · 已关联原支出":"");
-  return '<div class="txn"><div class="grow"><b>'+title+'</b> <span class="tag '+t.nature+'">'+NATURE_NAME[t.nature]+'</span><div class="meta">'+meta+'</div></div><div class="amt '+cls+'">'+sign+" "+fmt(t.amt)+'</div><button class="del" data-del="'+t.id+'">删除</button></div>';
+  meta=t.date+" · "+typeName+" · "+esc(acctName(t.acct))+(t.note?" · "+esc(t.note):"")+(t.linkedTo?" - Linked to original expense":"");
+  return '<div class="txn"><div class="grow"><b>'+title+'</b> <span class="tag '+t.nature+'">'+NATURE_NAME[t.nature]+'</span><div class="meta">'+meta+'</div></div><div class="amt '+cls+'">'+sign+" "+fmt(t.amt)+'</div><button class="del" data-del="'+t.id+'">Delete</button></div>';
 }
 function renderTxns(){
   var q=$("qSearch").value.trim().toLowerCase(), qc=$("qCat").value, qt=$("qType").value;
@@ -720,9 +720,9 @@ function renderTxns(){
     if(q && JSON.stringify(t).toLowerCase().indexOf(q)<0) return false;
     return true;
   });
-  var html=list.length? list.map(txnHTML).join("") : '<div class="empty">暂无记录。用上面的模板一键记一笔，或到「导入 / 同步」导入随手记历史。</div>';
+  var html=list.length? list.map(txnHTML).join("") : '<div class="empty">No records yet. Use a template above to add an entry, or import Suishouji history from Import / Sync.</div>';
   $("txnList").innerHTML=html;
-  $("homeRecent").innerHTML=txns.length? txns.slice().sort(function(a,b){return b.date<a.date?-1:1;}).slice(0,5).map(txnHTML).join("") : '<div class="empty">暂无记录</div>';
+  $("homeRecent").innerHTML=txns.length? txns.slice().sort(function(a,b){return b.date<a.date?-1:1;}).slice(0,5).map(txnHTML).join("") : '<div class="empty">No records yet</div>';
   document.querySelectorAll("[data-del]").forEach(function(btn){
     btn.addEventListener("click",function(){
       var id=Number(btn.getAttribute("data-del"));
@@ -744,7 +744,7 @@ function applyBalance(t, dir){
 }
 function renderAccounts(){
   function row(a){
-    return '<div class="acct"><div><b>'+esc(a.name)+'</b> '+(a.virtual?'<span class="pill amber">虚拟 · 不计入可用</span>':"")+'<div class="meta" style="font-size:12.5px;color:var(--muted)">'+esc(a.kind)+" · "+a.ccy+'</div></div><div class="bal">'+fmt(a.bal)+'</div></div>';
+    return '<div class="acct"><div><b>'+esc(a.name)+'</b> '+(a.virtual?'<span class="pill amber">Virtual - Not counted as available</span>':"")+'<div class="meta" style="font-size:12.5px;color:var(--muted)">'+esc(a.kind)+" · "+a.ccy+'</div></div><div class="bal">'+fmt(a.bal)+'</div></div>';
   }
   $("acctList").innerHTML=accounts.filter(function(a){return !a.archived && !a.virtual;}).map(row).join("");
   $("virtualList").innerHTML=accounts.filter(function(a){return a.virtual;}).map(row).join("");
@@ -759,13 +759,13 @@ function renderInvest(){
   var now=new Date();
   $("gicCountdown").innerHTML=holdings.filter(function(h){return h.maturity;}).map(function(h){
     var days=Math.ceil((new Date(h.maturity+"T00:00:00")-now)/86400000);
-    return '<div style="display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0"><span>'+esc(h.name)+'</span><b>'+h.maturity+' · 还有 '+days+' 天</b></div>';
+    return '<div style="display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0"><span>'+esc(h.name)+'</span><b>'+h.maturity+' - '+days+' days left</b></div>';
   }).join("");
 }
 function renderCats(){
   $("catOverview").innerHTML=CATS.map(function(c){
-    return '<div style="margin-bottom:8px"><b>'+esc(c.g)+'</b>：'+c.subs.map(function(s){return esc(s[0])+' <span class="tag '+s[1]+'">'+NATURE_NAME[s[1]]+"</span>";}).join(" · ")+"</div>";
-  }).join("")+'<div><b>收入</b>：'+INCOME_CATS.map(function(s){return esc(s[0]);}).join(" · ")+"</div>";
+    return '<div style="margin-bottom:8px"><b>'+esc(c.g)+'</b>: '+c.subs.map(function(s){return esc(s[0])+' <span class="tag '+s[1]+'">'+NATURE_NAME[s[1]]+"</span>";}).join(" · ")+"</div>";
+  }).join("")+'<div><b>Income</b>: '+INCOME_CATS.map(function(s){return esc(s[0]);}).join(" · ")+"</div>";
 }
 function renderMerchants(){
   $("merchantGrid").innerHTML=merchants.map(function(m,i){
@@ -788,7 +788,7 @@ function renderTemplates(){
     b.addEventListener("click",function(){ applyTemplate(templates[Number(b.getAttribute("data-tpl"))]); });
   });
   $("tplManage").innerHTML=templates.map(function(t,i){
-    return '<div class="txn"><div class="grow"><b>'+esc(t.name)+'</b><div class="meta">'+(t.type==="transfer"?"转账":t.cat)+(t.amt?" · "+fmt(t.amt):"")+" · "+esc(acctName(t.acct))+'</div></div><button class="del" data-tpldel="'+i+'">删除</button></div>';
+    return '<div class="txn"><div class="grow"><b>'+esc(t.name)+'</b><div class="meta">'+(t.type==="transfer"?"Transfer":t.cat)+(t.amt?" · "+fmt(t.amt):"")+" · "+esc(acctName(t.acct))+'</div></div><button class="del" data-tpldel="'+i+'">Delete</button></div>';
   }).join("");
   document.querySelectorAll("[data-tpldel]").forEach(function(b){
     b.addEventListener("click",function(){ templates.splice(Number(b.getAttribute("data-tpldel")),1); settingsDirty=true; renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync(); });
@@ -796,7 +796,7 @@ function renderTemplates(){
 }
 function renderAll(){ renderSummary(); renderBudgets(); renderTxns(); renderAccounts(); renderInvest(); renderCats(); renderMerchants(); renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync(); }
 
-/* ==================== 记账表单 ==================== */
+/* ==================== Entry Form ==================== */
 var curType="expense";
 function setType(type){
   curType=type;
@@ -804,7 +804,7 @@ function setType(type){
   $("formSimple").style.display = type==="transfer" ? "none":"block";
   $("formTransfer").style.display = type==="transfer" ? "block":"none";
   $("refundLink").style.display = type==="refund" ? "block":"none";
-  $("formTitle").textContent = type==="transfer" ? "记一笔转账" : (type==="refund" ? "记一笔退款" : "记一笔");
+  $("formTitle").textContent = type==="transfer" ? "Add a Transfer" : (type==="refund" ? "Add a Refund" : "Add an Entry");
   fillCatSelect($("fCat"), type==="income"?"income":"expense");
   if(type==="refund") refreshRefundPick("");
 }
@@ -817,7 +817,7 @@ $("fMerchant").addEventListener("change",function(){
 });
 function refreshRefundPick(keyword){
   var kw=(keyword||"").toLowerCase();
-  var opts='<option value="">不关联</option>';
+  var opts='<option value="">Do not link</option>';
   txns.filter(function(t){return t.type==="expense";}).forEach(function(t){
     var hay=(t.merchant+" "+t.note+" "+t.cat+" "+t.amt).toLowerCase();
     if(kw && hay.indexOf(kw)<0) return;
@@ -836,7 +836,7 @@ function applyTemplate(t){
   } else {
     setType(t.type);
     if(t.cat) $("fCat").value=t.cat;
-    $("fNature").value=catNature(t.cat||"其他支出");
+    $("fNature").value=catNature(t.cat||"Other Expenses");
     if(t.acct) $("fAcct").value=t.acct;
     $("fMerchant").value=t.merchant||"";
     $("fNote").value=t.note||"";
@@ -847,20 +847,20 @@ function applyTemplate(t){
 $("btnAdd").addEventListener("click",function(){
   var amt=parseFloat($("fAmt").value);
   var msg=$("addMsg");
-  if(!amt || amt<=0){ msg.textContent="请先填金额。"; msg.className="msg err"; return; }
+  if(!amt || amt<=0){ msg.textContent="Please enter an amount first."; msg.className="msg err"; return; }
   var t={ id:seq++, type:curType, date:$("fDate").value||todayStr(), amt:Math.round(amt*100)/100,
     cat:$("fCat").value, nature:$("fNature").value, acct:$("fAcct").value,
     merchant:$("fMerchant").value.trim(), note:$("fNote").value.trim(),
     linkedTo: curType==="refund" ? ($("fRefundPick").value||null) : null, updatedAt:Date.now() };
   txns.push(t); applyBalance(t,1);
-  msg.textContent="已保存："+(t.type==="income"?"收入":t.type==="refund"?"退款":"支出")+" "+fmt(t.amt)+"（"+t.cat+"）"; msg.className="msg ok";
+  msg.textContent="Saved: "+(t.type==="income"?"Income":t.type==="refund"?"Refund":"Expense")+" "+fmt(t.amt)+" ("+t.cat+")"; msg.className="msg ok";
   $("fAmt").value=""; $("fNote").value="";
   renderAll();
 });
 $("btnSaveTpl").addEventListener("click",function(){
   var name=$("fNote").value.trim()||$("fCat").value;
   templates.push({name:name, type:curType, cat:$("fCat").value, amt:parseFloat($("fAmt").value)||null, acct:$("fAcct").value, merchant:$("fMerchant").value.trim(), note:$("fNote").value.trim()});
-  $("addMsg").textContent="已存为模板「"+name+"」。"; $("addMsg").className="msg ok";
+  $("addMsg").textContent="Saved as template: "+name+"."; $("addMsg").className="msg ok";
   settingsDirty=true; renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync();
 });
 $("tAmtOut").addEventListener("input",updateFx);
@@ -869,21 +869,21 @@ function updateFx(){
   var o=parseFloat($("tAmtOut").value), i=parseFloat($("tAmtIn").value);
   var from=acctById($("tFrom").value), to=acctById($("tTo").value);
   if(o>0 && i>0 && from && to && from.ccy!==to.ccy){
-    $("fxHint").textContent="跨币种转账："+from.ccy+" "+o.toFixed(2)+" → "+to.ccy+" "+i.toFixed(2)+"，参考汇率 1 "+from.ccy+" ≈ "+(i/o).toFixed(4)+" "+to.ccy+"。转账不计入收支统计。";
+    $("fxHint").textContent="Cross-currency transfer: "+from.ccy+" "+o.toFixed(2)+" → "+to.ccy+" "+i.toFixed(2)+", reference rate 1 "+from.ccy+" ≈ "+(i/o).toFixed(4)+" "+to.ccy+". Transfers do not count toward income or expenses.";
   } else {
-    $("fxHint").textContent="同币种转账两边金额相同；跨币种（如 USD → CAD）分别填两边金额，这里会自动反推参考汇率。转账不计入收支统计。";
+    $("fxHint").textContent="For same-currency transfers both sides are equal. For cross-currency (e.g., USD to CAD), enter both amounts and the implied rate is calculated automatically. Transfers do not count toward income or expenses.";
   }
 }
 $("tFrom").addEventListener("change",updateFx); $("tTo").addEventListener("change",updateFx);
 $("btnTransfer").addEventListener("click",function(){
   var out=parseFloat($("tAmtOut").value), msg=$("transferMsg");
-  if(!out||out<=0){ msg.textContent="请先填转出金额。"; msg.className="msg err"; return; }
-  if($("tFrom").value===$("tTo").value){ msg.textContent="转出和转入不能是同一个账户。"; msg.className="msg err"; return; }
+  if(!out||out<=0){ msg.textContent="Please enter the amount out first."; msg.className="msg err"; return; }
+  if($("tFrom").value===$("tTo").value){ msg.textContent="From and To cannot be the same account."; msg.className="msg err"; return; }
   var inn=parseFloat($("tAmtIn").value)||out;
   var t={id:seq++, type:"transfer", date:$("tDate").value||todayStr(), amt:Math.round(out*100)/100, amtIn:Math.round(inn*100)/100,
-    fromAcct:$("tFrom").value, toAcct:$("tTo").value, note:$("tNote").value.trim(), cat:"转账", nature:"flex", merchant:"", updatedAt:Date.now()};
+    fromAcct:$("tFrom").value, toAcct:$("tTo").value, note:$("tNote").value.trim(), cat:"Transfer", nature:"flex", merchant:"", updatedAt:Date.now()};
   txns.push(t); applyBalance(t,1);
-  msg.textContent="已保存转账："+acctName(t.fromAcct)+" → "+acctName(t.toAcct)+" "+fmt(t.amt)+(inn!==out?" → "+fmt(inn):""); msg.className="msg ok";
+  msg.textContent="Saved transfer: "+acctName(t.fromAcct)+" → "+acctName(t.toAcct)+" "+fmt(t.amt)+(inn!==out?" → "+fmt(inn):""); msg.className="msg ok";
   $("tAmtOut").value=""; $("tAmtIn").value="";
   renderAll();
 });
@@ -891,26 +891,26 @@ $("qSearch").addEventListener("input",renderTxns);
 $("qCat").addEventListener("change",renderTxns);
 $("qType").addEventListener("change",renderTxns);
 
-/* 模板 / 商户新增 */
+/* Add Template / Merchant */
 $("ntAdd").addEventListener("click",function(){
   var name=$("ntName").value.trim();
-  if(!name){ $("ntMsg").textContent="先给模板起个名。"; $("ntMsg").className="msg err"; return; }
+  if(!name){ $("ntMsg").textContent="Give the template a name first."; $("ntMsg").className="msg err"; return; }
   templates.push({name:name, type:"expense", cat:$("ntCat").value, amt:parseFloat($("ntAmt").value)||null, acct:$("ntAcct").value, merchant:$("ntMerchant").value.trim(), note:$("ntNote").value.trim()});
-  $("ntName").value=""; $("ntMsg").textContent="模板「"+name+"」已添加。"; $("ntMsg").className="msg ok";
+  $("ntName").value=""; $("ntMsg").textContent="Template added: "+name+"."; $("ntMsg").className="msg ok";
   settingsDirty=true; renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync();
 });
 $("nmAdd").addEventListener("click",function(){
   var name=$("nmName").value.trim();
-  if(!name){ $("nmMsg").textContent="先填商户名。"; $("nmMsg").className="msg err"; return; }
+  if(!name){ $("nmMsg").textContent="Enter a merchant name first."; $("nmMsg").className="msg err"; return; }
   merchants.push({name:name, cat:$("nmCat").value});
-  $("nmName").value=""; $("nmMsg").textContent="商户「"+name+"」已添加。"; $("nmMsg").className="msg ok";
+  $("nmName").value=""; $("nmMsg").textContent="Merchant added: "+name+"."; $("nmMsg").className="msg ok";
   settingsDirty=true; refreshFormSelects(); renderMerchants(); saveLocal(); updateSyncUI(); scheduleAutoSync();
 });
 
-/* ==================== 预算新增 ==================== */
+/* ==================== Add Budget ==================== */
 function fillBudgetTargets(){
   var dim=$("nbDim").value, sel=$("nbTarget"), html="";
-  if(dim==="total") html='<option value="本月总支出">本月总支出</option>';
+  if(dim==="total") html='<option value="Monthly Total">Monthly Total</option>';
   if(dim==="category") html=CATS.map(function(c){return '<option value="'+esc(c.g)+'">'+esc(c.g)+"</option>";}).join("");
   if(dim==="nature") html=Object.keys(NATURE_NAME).map(function(k){return '<option value="'+k+'">'+NATURE_NAME[k]+"</option>";}).join("");
   sel.innerHTML=html;
@@ -918,15 +918,15 @@ function fillBudgetTargets(){
 $("nbDim").addEventListener("change",fillBudgetTargets);
 $("nbAdd").addEventListener("click",function(){
   var amt=parseFloat($("nbAmt").value);
-  if(!amt||amt<=0){ $("nbMsg").textContent="先填预算金额。"; $("nbMsg").className="msg err"; return; }
+  if(!amt||amt<=0){ $("nbMsg").textContent="Enter a budget amount first."; $("nbMsg").className="msg err"; return; }
   var dim=$("nbDim").value, target=$("nbTarget").value, found=false;
   budgets.forEach(function(b){ if(b.dim===dim&&b.target===target){ b.amt=amt; found=true; }});
   if(!found) budgets.push({dim:dim, target:target, amt:amt});
-  $("nbMsg").textContent=(found?"已更新":"已添加")+"预算。"; $("nbMsg").className="msg ok";
+  $("nbMsg").textContent=(found?"Updated":"Added")+" budget."; $("nbMsg").className="msg ok";
   settingsDirty=true; renderBudgets(); renderSummary(); saveLocal(); updateSyncUI(); scheduleAutoSync();
 });
 
-/* ==================== 导入 / 导出 ==================== */
+/* ==================== Import / Export ==================== */
 function parseCSV(text){
   var rows=[], row=[], cur="", inQ=false;
   for(var i=0;i<text.length;i++){
@@ -947,17 +947,17 @@ $("importFile").addEventListener("change",function(){
   var file=$("importFile").files[0];
   if(!file) return;
   var box=$("importPreview");
-  box.innerHTML="<p class='hint'>正在读取…</p>";
+  box.innerHTML="<p class='hint'>Reading...</p>";
   if(file.name.toLowerCase().endsWith(".json")){
     var rj=new FileReader();
     rj.onload=function(){
       try{
         var data=JSON.parse(rj.result);
         if(data && data.txns){ pendingImport={json:data};
-          box.innerHTML="<p>识别为本工具的数据文件：含 "+data.txns.length+" 条记录、"+(data.accounts?data.accounts.length:0)+" 个账户。</p><button class='btn small' id='btnDoImport'>确认导入（合并去重）</button>";
+          box.innerHTML="<p>Recognized as a data file from this tool: "+data.txns.length+" records, "+(data.accounts?data.accounts.length:0)+" accounts.</p><button class='btn small' id='btnDoImport'>Confirm Import (merge and deduplicate)</button>";
           $("btnDoImport").addEventListener("click",doImport);
-        } else box.innerHTML="<p class='hint'>这个 JSON 不是本工具的数据文件格式。</p>";
-      }catch(e){ box.innerHTML="<p class='hint'>JSON 解析失败。</p>"; }
+        } else box.innerHTML="<p class='hint'>This JSON is not in the data file format for this tool.</p>";
+      }catch(e){ box.innerHTML="<p class='hint'>Failed to parse JSON.</p>"; }
     };
     rj.readAsText(file,"UTF-8");
     return;
@@ -965,7 +965,7 @@ $("importFile").addEventListener("change",function(){
   var reader=new FileReader();
   reader.onload=function(){
     var text=reader.result;
-    if(text.indexOf("�")>=0){ /* 可能是 GBK，换编码重试 */
+    if(text.indexOf("�")>=0){ /* May be GBK; retry with that encoding */
       var r2=new FileReader();
       r2.onload=function(){ handleCSV(r2.result); };
       r2.readAsText(file,"GBK");
@@ -983,7 +983,7 @@ function handleCSV(text){
     var joined=rows[i].join(",");
     if(joined.indexOf("交易类型")>=0 && joined.indexOf("日期")>=0 && joined.indexOf("金额")>=0){ hi=i; break; }
   }
-  if(hi<0){ box.innerHTML="<p class='hint'>没找到随手记表头（需要含「交易类型、日期、金额」的行）。请确认是随手记专业版导出的 CSV。</p>"; return; }
+  if(hi<0){ box.innerHTML="<p class='hint'>Suishouji header not found. Please confirm this is a CSV exported from Suishouji Professional.</p>"; return; }
   var head=rows[hi].map(function(h){return h.trim();});
   function col(name){ return head.indexOf(name); }
   var cType=col("交易类型"), cDate=col("日期"), cCat=col("类别"), cSub=col("子类别"), cAmt=col("金额"), cAcct=col("账户"), cNote=col("备注");
@@ -998,11 +998,13 @@ function handleCSV(text){
     if(type.indexOf("转")===0){ counts.transfer++; continue; }
     if(type.indexOf("余额变更")>=0||type.indexOf("负债变更")>=0){ counts.skip++; continue; }
     var isIncome=type.indexOf("收入")>=0;
-    var sub=(cSub>=0?row[cSub]:"")||row[cCat]||"其他支出";
+    var sub=(cSub>=0?row[cSub]:"")||row[cCat]||"Other Expenses";
     sub=sub.trim();
-    if(sub==="私家车费用"){ sub=((cNote>=0?row[cNote]:"").indexOf("加油")>=0)?"加油":"汽车保养维修"; }
-    if(!isIncome && catGroup(sub)==="其他" && sub!=="其他支出"){ sub="其他支出"; }
-    if(isIncome && !INCOME_CATS.some(function(x){return x[0]===sub;})) sub="其他收入";
+    if(sub==="私家车费用"||sub==="Car Expenses"){ var nn=(cNote>=0?row[cNote]:""); sub=(nn.indexOf("加油")>=0||nn.toLowerCase().indexOf("gas")>=0||nn.toLowerCase().indexOf("fuel")>=0)?"Gas":"Car Maintenance"; }
+    var CN2EN={"房租":"Rent","水电煤气":"Utilities","物业保险":"Property Insurance","维修保养":"Maintenance and Repairs","早午晚餐":"Meals Out","超市买菜":"Groceries","烟酒茶饮料":"Drinks and Tobacco","日常购物":"Everyday Shopping","鞋帽包包":"Clothing and Accessories","数码装备":"Electronics","加油":"Gas","汽车保养维修":"Car Maintenance","车保":"Car Insurance","公共交通/打车":"Transit and Rideshare","手机费":"Phone Bill","上网费":"Internet Bill","订阅费":"Subscriptions","旅游度假":"Travel and Vacation","休闲玩乐":"Entertainment","治疗费":"Medical Treatment","药品费":"Pharmacy and Medication","送礼请客":"Gifts and Hosting","银行手续":"Bank Fees","其他支出":"Other Expenses","工资收入":"Salary Income","利息收入":"Interest Income","其他收入":"Other Income","意外来钱":"Windfall","礼金":"Gift Money","退税":"Tax Refund"};
+    if(CN2EN[sub]) sub=CN2EN[sub];
+    if(!isIncome && catGroup(sub)==="Other Expenses" && sub!=="Other Expenses"){ sub="Other Expenses"; }
+    if(isIncome && !INCOME_CATS.some(function(x){return x[0]===sub;})) sub="Other Income";
     var note=cNote>=0?(row[cNote]||"").trim():"";
     var key=date+"|"+amt+"|"+note;
     if(seen[key]){ dup++; continue; }
@@ -1013,8 +1015,8 @@ function handleCSV(text){
     items.push({id:seq++, type:isIncome?"income":"expense", date:date, amt:amt, cat:sub, nature:catNature(sub), acct:acctId, merchant:"", note:note, linkedTo:null, updatedAt:Date.now()});
   }
   pendingImport={items:items};
-  box.innerHTML="<p>预览：可导入 <b>"+(counts.income+counts.expense)+"</b> 条（收入 "+counts.income+" · 支出 "+counts.expense+"）· 重复跳过 "+dup+" 条 · 转账跳过 "+counts.transfer+" 条 · 余额/负债变更跳过 "+counts.skip+" 条 · 无法解析 "+counts.bad+" 条。</p>"+
-    (items.length? "<button class='btn small' id='btnDoImport'>确认导入这 "+items.length+" 条</button>" : "<p class='hint'>没有可导入的新记录。</p>");
+  box.innerHTML="<p>Preview: <b>"+(counts.income+counts.expense)+"</b> records can be imported (Income "+counts.income+" - Expenses "+counts.expense+") - Duplicates skipped "+dup+" - Transfers skipped "+counts.transfer+" - Balance/liability changes skipped "+counts.skip+" - Unparseable "+counts.bad+".</p>"+
+    (items.length? "<button class='btn small' id='btnDoImport'>Confirm Import of "+items.length+" Records</button>" : "<p class='hint'>No new records to import.</p>");
   if(items.length) $("btnDoImport").addEventListener("click",doImport);
 }
 function doImport(){
@@ -1024,13 +1026,13 @@ function doImport(){
     var data=pendingImport.json, added=0;
     var seen={}; txns.forEach(function(t){ seen[t.date+"|"+t.amt+"|"+(t.note||"")]=true; });
     data.txns.forEach(function(t){ var k=t.date+"|"+t.amt+"|"+(t.note||""); if(!seen[k]){ t.id=seq++; txns.push(t); applyBalance(t,1); added++; } });
-    box.innerHTML="<p>已从数据文件合并 "+added+" 条新记录。</p>";
+    box.innerHTML="<p>Merged "+added+" new records from the data file.</p>";
   } else {
     pendingImport.items.forEach(function(t){ txns.push(t); applyBalance(t,1); });
-    box.innerHTML="<p>已导入 "+pendingImport.items.length+" 条记录，账户余额已同步更新。</p>";
+    box.innerHTML="<p>Imported "+pendingImport.items.length+" records. Account balances have been updated.</p>";
   }
   pendingImport=null;
-  settingsDirty=true; /* 导入的数据也要推到云端 */
+  settingsDirty=true; /* Imported data also needs to be pushed to the cloud */
   renderAll();
 }
 $("btnExport").addEventListener("click",function(){
@@ -1039,10 +1041,10 @@ $("btnExport").addEventListener("click",function(){
   var a=document.createElement("a");
   a.href=URL.createObjectURL(blob); a.download="finance-data.json"; a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
-  $("exportMsg").textContent="已导出 finance-data.json，存回 OneDrive 的 Finance 文件夹即完成同步。"; $("exportMsg").className="msg ok";
+  $("exportMsg").textContent="Exported finance-data.json. Save it back to the Finance folder in OneDrive to complete sync."; $("exportMsg").className="msg ok";
 });
 
-/* ==================== OneDrive 直连同步（MSAL + Graph） ==================== */
+/* ==================== OneDrive Direct Sync (MSAL + Graph) ==================== */
 var OD_CLIENT_ID = "cff5bc5e-6954-419f-924a-e7bcf81fc853";
 var OD_SCOPES = ["Files.ReadWrite", "offline_access"];
 var OD_FILE_PATH = "/me/drive/root:/Finance/finance-data.json:/content";
@@ -1061,18 +1063,18 @@ function pendingOps(){
 function updateSyncUI(){
   var on = navigator.onLine;
   $("netDot").className = "dot " + (on ? "on" : "off");
-  $("netState").textContent = on ? "在线" : "离线（可照常记账）";
-  $("odState").textContent = odAccount ? ("已连接 · " + (odAccount.name || odAccount.username || "")) : "未连接";
-  $("lastSync").textContent = lastSyncAt ? new Date(lastSyncAt).toLocaleString("zh-CN", {hour12:false}) : "从未";
+  $("netState").textContent = on ? "Online" : "Offline (you can still bookkeep)";
+  $("odState").textContent = odAccount ? ("Connected - " + (odAccount.name || odAccount.username || "")) : "Not connected";
+  $("lastSync").textContent = lastSyncAt ? new Date(lastSyncAt).toLocaleString("en-CA", {hour12:false}) : "Never";
   var p = pendingOps();
-  $("pendingCount").textContent = p + " 条";
+  $("pendingCount").textContent = p + " items";
   $("btnDisconnect").style.display = odAccount ? "" : "none";
-  $("btnConnect").textContent = odAccount ? "已连接 OneDrive" : "连接 OneDrive";
-  $("btnConnect2").textContent = odAccount ? "已连接 OneDrive" : "连接 OneDrive";
+  $("btnConnect").textContent = odAccount ? "Connected to OneDrive" : "Connect OneDrive";
+  $("btnConnect2").textContent = odAccount ? "Connected to OneDrive" : "Connect OneDrive";
 }
 function initMsal(){
   if(msalApp) return true;
-  if(typeof msal === "undefined"){ setSyncMsg("微软登录组件没加载成功（可能被网络拦截），请联网刷新一次再试；手动导出/导入仍可用。", false); return false; }
+  if(typeof msal === "undefined"){ setSyncMsg("The Microsoft sign-in component failed to load (it may be blocked by the network). Refresh once while online and try again; manual export/import still works.", false); return false; }
   msalApp = new msal.PublicClientApplication({
     auth: { clientId: OD_CLIENT_ID, authority: "https://login.microsoftonline.com/common",
             redirectUri: "https://mmmjp92.github.io/finance-pwa/" },
@@ -1114,13 +1116,13 @@ function ensureFinanceFolder(){
     body: JSON.stringify({ name: "Finance", folder: {}, "@microsoft.graph.conflictBehavior": "fail" })
   }).then(function(resp){
     if(resp.ok || resp.status === 409) return;
-    return resp.text().then(function(t){ throw new Error("建 Finance 文件夹失败：" + resp.status + " " + t.slice(0,120)); });
+    return resp.text().then(function(t){ throw new Error("Failed to create Finance folder: " + resp.status + " " + t.slice(0,120)); });
   });
 }
 function pullRemote(){
   return graphFetch(OD_FILE_PATH, { method: "GET" }).then(function(resp){
     if(resp.status === 404) return null;
-    if(!resp.ok) return resp.text().then(function(t){ throw new Error("拉取失败：" + resp.status + " " + t.slice(0,120)); });
+    if(!resp.ok) return resp.text().then(function(t){ throw new Error("Pull failed: " + resp.status + " " + t.slice(0,120)); });
     return resp.json();
   });
 }
@@ -1130,7 +1132,7 @@ function pushRemote(){
   return ensureFinanceFolder().then(function(){
     return graphFetch(OD_FILE_PATH, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
   }).then(function(resp){
-    if(!resp.ok) return resp.text().then(function(t){ throw new Error("推送失败：" + resp.status + " " + t.slice(0,120)); });
+    if(!resp.ok) return resp.text().then(function(t){ throw new Error("Push failed: " + resp.status + " " + t.slice(0,120)); });
   });
 }
 function recomputeBalances(){
@@ -1146,7 +1148,7 @@ function mergeRemote(remote){
   var allKeys = {};
   Object.keys(localMap).forEach(function(k){ allKeys[k] = 1; });
   Object.keys(remoteMap).forEach(function(k){ allKeys[k] = 1; });
-  /* 合并墓碑：两边删除都算数 */
+  /* Merge tombstones: deletions from both sides count */
   var tomb = {};
   deletedKeys.forEach(function(d){ tomb[d.key] = Math.max(tomb[d.key] || 0, d.deletedAt); });
   (remote.deletedKeys || []).forEach(function(d){ tomb[d.key] = Math.max(tomb[d.key] || 0, d.deletedAt); });
@@ -1155,12 +1157,12 @@ function mergeRemote(remote){
     if(l && r) pick = ((r.updatedAt || 0) > (l.updatedAt || 0)) ? r : l;
     else pick = l || r;
     if(!l && r) added++;
-    if(tomb[k] && tomb[k] >= (pick.updatedAt || 0)) return; /* 已被删除且删除更新 */
+    if(tomb[k] && tomb[k] >= (pick.updatedAt || 0)) return; /* Already deleted and the deletion is newer */
     merged.push(pick);
   });
   txns = merged;
   deletedKeys = Object.keys(tomb).map(function(k){ return { key:k, deletedAt:tomb[k] }; });
-  /* 账户以本机为准（余额由流水重算）；云端新出现的账户补进来 */
+  /* Accounts use local as source of truth (balances recomputed from transactions); add any new accounts from the cloud */
   if(remote.accounts){
     remote.accounts.forEach(function(ra){
       if(!acctById(ra.id)){ accounts.push(ra); if(remote.baseBals && remote.baseBals[ra.id] != null) baseBals[ra.id] = remote.baseBals[ra.id]; }
@@ -1172,20 +1174,20 @@ function mergeRemote(remote){
 }
 function syncNow(auto){
   if(syncing) return;
-  if(!odAccount){ if(!auto) setSyncMsg("还没连接 OneDrive。先到「安装 / 连接」页点「连接 OneDrive」。", false); return; }
-  if(!navigator.onLine){ if(!auto) setSyncMsg("当前离线，新记的账已存本机并计入待同步，联网后会自动推送。", false); return; }
-  syncing = true; setSyncMsg("同步中…");
+  if(!odAccount){ if(!auto) setSyncMsg("Not connected to OneDrive yet. Go to the Install / Connect tab and click Connect OneDrive.", false); return; }
+  if(!navigator.onLine){ if(!auto) setSyncMsg("You are offline. New entries are stored locally and counted as pending; they will push automatically when you reconnect.", false); return; }
+  syncing = true; setSyncMsg("Syncing...");
   pullRemote().then(function(remote){
     var added = mergeRemote(remote);
     return pushRemote().then(function(){ return added; });
   }).then(function(added){
     lastSyncAt = Date.now(); settingsDirty = false;
     renderAll();
-    setSyncMsg("同步完成" + (added ? "：从云端合并了 " + added + " 条新记录。" : "：已是最新。"), true);
+    setSyncMsg("Sync complete" + (added ? ": merged " + added + " new records from the cloud." : ": already up to date."), true);
   }).catch(function(err){
     var msg = (err && (err.errorMessage || err.message)) || String(err);
-    if(/AADSTS50011|redirect/i.test(msg)) msg = "登录跳转地址不匹配（AADSTS50011）：请按「安装 / 连接」页第 2–3 步，在 Azure 里给应用补上 Single-page application 跳转地址后再试。";
-    setSyncMsg("同步失败：" + msg + "。数据都在本机，不受影响，稍后点「立即同步」重试。", false);
+    if(/AADSTS50011|redirect/i.test(msg)) msg = "Redirect URI mismatch (AADSTS50011): follow steps 2-3 in the Install / Connect tab to add the Single-page application redirect URI in Azure, then try again.";
+    setSyncMsg("Sync failed: " + msg + ". Your data is safe locally. Try Sync Now again later.", false);
   }).then(function(){ syncing = false; updateSyncUI(); });
 }
 function scheduleAutoSync(){
@@ -1196,20 +1198,20 @@ function scheduleAutoSync(){
 }
 function connectOneDrive(){
   if(!initMsal()) return;
-  if(odAccount){ setSyncMsg("已经连接 OneDrive（" + (odAccount.username || "") + "），点「立即同步」即可同步。", true); return; }
-  setSyncMsg("正在打开微软登录…");
+  if(odAccount){ setSyncMsg("Already connected to OneDrive (" + (odAccount.username || "") + "). Click Sync Now to sync.", true); return; }
+  setSyncMsg("Opening Microsoft sign-in...");
   msalApp.loginPopup({ scopes: OD_SCOPES }).then(function(resp){
     odAccount = resp.account; msalApp.setActiveAccount(odAccount);
     updateSyncUI();
-    setSyncMsg("已连接 OneDrive，开始第一次同步…", true);
+    setSyncMsg("Connected to OneDrive. Starting the first sync...", true);
     syncNow(true);
   }).catch(function(err){
     var msg = (err && (err.errorMessage || err.message)) || String(err);
-    if(/popup/i.test(msg)) { /* 弹窗被拦截时改用整页跳转登录 */
+    if(/popup/i.test(msg)) { /* If the popup is blocked, fall back to full-page redirect sign-in */
       msalApp.loginRedirect({ scopes: OD_SCOPES }); return;
     }
-    if(/AADSTS50011|redirect/i.test(msg)) msg = "登录跳转地址不匹配（AADSTS50011）：请按本页上面第 2–3 步，在 Azure 里给应用补上 Single-page application 跳转地址后再试。";
-    setSyncMsg("连接失败：" + msg, false);
+    if(/AADSTS50011|redirect/i.test(msg)) msg = "Redirect URI mismatch (AADSTS50011): follow steps 2-3 above to add the Single-page application redirect URI in Azure, then try again.";
+    setSyncMsg("Connection failed: " + msg, false);
   });
 }
 function disconnectOneDrive(){
@@ -1217,7 +1219,7 @@ function disconnectOneDrive(){
   var acc = odAccount; odAccount = null;
   msalApp.logoutPopup({ account: acc }).catch(function(){});
   updateSyncUI();
-  setSyncMsg("已断开 OneDrive。本机数据保留，之后可随时重新连接。", true);
+  setSyncMsg("Disconnected from OneDrive. Local data is kept; you can reconnect anytime.", true);
 }
 $("btnConnect").addEventListener("click", connectOneDrive);
 $("btnConnect2").addEventListener("click", connectOneDrive);
@@ -1225,14 +1227,14 @@ $("btnDisconnect").addEventListener("click", disconnectOneDrive);
 $("btnSyncNow").addEventListener("click", function(){ syncNow(false); });
 $("btnSyncNow2").addEventListener("click", function(){ syncNow(false); });
 $("btnGotoSync").addEventListener("click", function(){ gotoTab("sync"); });
-window.addEventListener("online", function(){ updateSyncUI(); setSyncMsg("网络已恢复，正在自动同步…"); syncNow(true); });
+window.addEventListener("online", function(){ updateSyncUI(); setSyncMsg("Network restored. Syncing automatically..."); syncNow(true); });
 window.addEventListener("offline", function(){ updateSyncUI(); });
 
-/* ==================== 安装到桌面 ==================== */
+/* ==================== Install to Home Screen ==================== */
 var deferredInstall = null, deferredShow = null;
 window.addEventListener("beforeinstallprompt", function(e){
   e.preventDefault(); deferredInstall = e;
-  /* 保存浏览器安装事件自带的显示方法引用（与 window 的对话框 API 无关） */
+  /* Save a reference to the display method from the browser install event */
   deferredShow = e["pro" + "mpt"].bind(e);
 });
 function isStandalone(){
@@ -1240,35 +1242,30 @@ function isStandalone(){
 }
 function doInstall(){
   var msg = $("installMsg");
-  if(isStandalone()){ msg.textContent = "已经装好了：你现在就是从桌面图标打开的独立窗口。"; msg.className = "msg ok"; return; }
+  if(isStandalone()){ msg.textContent = "Already installed: you are opening the standalone window from the home-screen icon."; msg.className = "msg ok"; return; }
   if(deferredInstall && deferredShow){
     deferredShow();
     deferredInstall.userChoice.then(function(c){
-      msg.textContent = c.outcome === "accepted" ? "已安装，去桌面点图标打开试试。" : "这次没装，也可以按下面对应设备的步骤手动添加。";
+      msg.textContent = c.outcome === "accepted" ? "Installed. Try opening it from the home-screen icon." : "Not installed this time. You can add it manually using the device steps below.";
       msg.className = "msg " + (c.outcome === "accepted" ? "ok" : "");
       deferredInstall = null; deferredShow = null;
     });
     return;
   }
-  msg.textContent = "这个浏览器没有弹出一键安装（iPhone Safari 就是这样），按下面对应设备的步骤手动添加即可，效果一样。";
+  msg.textContent = "This browser did not offer one-tap installation; iPhone Safari works this way. Add it manually using the device steps below — the result is the same.";
   msg.className = "msg";
 }
 $("btnInstall").addEventListener("click", doInstall);
 $("btnInstallTop").addEventListener("click", function(){ gotoTab("setup"); if(!isStandalone() && deferredInstall) doInstall(); });
 
-/* ==================== 离线外壳（Service Worker）状态 ==================== */
-/* 实情：本页托管只发布 index.html 与 assets/ 两个位置，sw.js 只能放在 assets/ 里
-   （放根目录的文件构建时会被丢弃、不对外发布，实测过）；而 Service Worker 的默认
-   作用域只覆盖脚本所在目录（assets/），页面本身不在其中，又没办法加
-   Service-Worker-Allowed 响应头放宽作用域。所以当前托管下离线外壳覆盖不了页面：
-   这里把注册结果如实显示在顶部状态栏，失败或作用域不覆盖都明确报错，不再静默
-   吞掉，也不再承诺断网冷启动。页面打开后的离线记账靠本机存储，不受此影响。 */
+/* ==================== Offline Shell (Service Worker) Status ==================== */
+/* Note: this hosting only publishes index.html and assets/. The service worker scope only covers assets/, so the offline shell cannot cover the page itself. The registration result is shown honestly in the status bar. Offline bookkeeping after the page is open relies on local storage and is not affected. */
 function setSwState(text, isErr){
   var el = $("swState");
   if(el){ el.textContent = text; el.style.color = isErr ? "var(--red)" : ""; }
 }
 function reportSwProblem(msg){
-  setSwState("未生效", true);
+  setSwState("Not active", true);
   var m = $("swMsg");
   if(m){ m.textContent = msg; m.className = "msg err"; }
 }
@@ -1278,20 +1275,20 @@ if("serviceWorker" in navigator){
       var covered = false;
       try{ covered = location.pathname.indexOf(new URL(reg.scope).pathname) === 0; }catch(e){}
       if(covered){
-        setSwState("已生效", false);
+        setSwState("Active", false);
         var sm = $("swMsg"); if(sm){ sm.textContent = ""; sm.className = "msg"; }
       } else {
-        reportSwProblem("离线外壳未生效：离线缓存组件的作用域只覆盖 assets/ 目录、管不到页面本身，所以断网冷启动仍需联网加载页面。数据保存在本机、页面打开后可离线记账，不受影响。");
+        reportSwProblem("Offline shell not active: the offline cache scope only covers the assets/ folder and cannot cover the page itself, so an offline cold start still needs network to load the page. Data is stored locally and you can bookkeep offline once the page is open.");
       }
     }).catch(function(err){
-      reportSwProblem("离线外壳注册失败：" + ((err && err.message) ? err.message : String(err)) + "。页面与本机数据不受影响，但断网冷启动无法离线打开页面。");
+      reportSwProblem("Offline shell registration failed: " + ((err && err.message) ? err.message : String(err)) + ". Page and local data are not affected, but an offline cold start cannot open the page offline.");
     });
   });
 } else {
-  setSwState("此浏览器不支持", true);
+  setSwState("Not supported in this browser", true);
 }
 
-/* ==================== 初始化 ==================== */
+/* ==================== Initialization ==================== */
 $("fDate").value=todayStr(); $("tDate").value=todayStr();
 refreshFormSelects();
 setType("expense");
