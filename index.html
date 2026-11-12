@@ -280,7 +280,8 @@
           <label><span>分类</span><select id="fCat"></select></label>
           <label><span>性质</span><select id="fNature"><option value="fixed">固定</option><option value="flex">灵活</option><option value="once">一次性</option></select></label>
           <label><span>账户</span><select id="fAcct"></select></label>
-          <label><span>商户</span><input id="fMerchant" list="merchantList" placeholder="输入商户名"><datalist id="merchantList"></datalist></label>
+          <label><span>商户</span><select id="fMerchantSel"></select></label>
+          <label id="fMerchantCustomWrap" style="display:none"><span>自定义商户名</span><input id="fMerchantCustom" placeholder="输入商户名"></label>
           <label><span>备注</span><input id="fNote" placeholder="备注"></label>
         </div>
         <div id="refundLink" style="display:none">
@@ -323,7 +324,7 @@
 
     <div class="card">
       <h2>常用商户</h2>
-      <p class="hint">点商户带入表单；输入商户名也会自动带默认分类。</p>
+      <p class="hint">点商户带入表单；记账时下拉选商户也会自动带默认分类。</p>
       <div class="mgrid" id="merchantGrid"></div>
       <div class="form-grid" style="margin-top:12px">
         <label><span>新商户名</span><input id="nmName" placeholder="商户名"></label>
@@ -764,7 +765,7 @@ function refreshFormSelects(){
   var q=$("qCat"); var cur=q.value;
   q.innerHTML='<option value="">全部分类</option>'+CATS.map(function(c){return '<option value="'+esc(c.g)+'">'+esc(c.g)+"</option>";}).join("");
   q.value=cur;
-  $("merchantList").innerHTML=merchants.map(function(m){return '<option value="'+esc(m.name)+'">';}).join("");
+  fillMerchantSelect();
   fillBudgetTargets();
 }
 
@@ -940,7 +941,7 @@ function renderMerchants(){
     b.addEventListener("click",function(){
       var m=merchants[Number(b.getAttribute("data-merchant"))];
       setType("expense");
-      $("fMerchant").value=zhMerchant(m.name); $("fCat").value=zhSub(m.cat); $("fNature").value=catNature(m.cat);
+      setMerchantValue(zhMerchant(m.name)); $("fCat").value=zhSub(m.cat); $("fNature").value=catNature(m.cat);
       gotoTab("book"); $("fAmt").focus();
     });
   });
@@ -971,7 +972,7 @@ function startEdit(id){
   setType(t.type);
   $("fDate").value = t.date; $("fAmt").value = t.amt; $("fCat").value = zhSub(t.cat);
   $("fNature").value = t.nature; $("fAcct").value = t.acct;
-  $("fMerchant").value = t.merchant || ""; $("fNote").value = t.note || "";
+  setMerchantValue(t.merchant || ""); $("fNote").value = t.note || "";
   $("btnAdd").textContent = "保存修改";
   $("addMsg").textContent = "正在编辑一笔" + (t.type === "income" ? "收入" : t.type === "refund" ? "退款" : "支出") + "，改完点保存修改。"; $("addMsg").className = "msg";
   gotoTab("book");
@@ -989,9 +990,39 @@ function setType(type){
 document.querySelectorAll("#typeSeg button").forEach(function(b){ b.addEventListener("click",function(){ setType(b.getAttribute("data-type")); }); });
 
 $("fCat").addEventListener("change",function(){ $("fNature").value=catNature($("fCat").value); });
-$("fMerchant").addEventListener("change",function(){
-  var v=$("fMerchant").value.trim();
-  merchants.forEach(function(m){ if(m.name===v && curType!=="income"){ $("fCat").value=m.cat; $("fNature").value=catNature(m.cat); } });
+/* 商户下拉：选项来自常用商户列表，选中按默认分类自动填分类；选「自定义…」可手输新商户 */
+var MERCHANT_CUSTOM="__custom__";
+function fillMerchantSelect(){
+  var sel=$("fMerchantSel"); if(!sel) return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">（不填）</option>'+merchants.map(function(m){return '<option value="'+esc(zhMerchant(m.name))+'">'+esc(zhMerchant(m.name))+"</option>";}).join("")+'<option value="'+MERCHANT_CUSTOM+'">自定义…</option>';
+  sel.value=cur||"";
+  syncMerchantCustom();
+}
+function syncMerchantCustom(){
+  var w=$("fMerchantCustomWrap"); if(!w) return;
+  w.style.display=$("fMerchantSel").value===MERCHANT_CUSTOM?"":"none";
+}
+function getMerchantValue(){
+  var v=$("fMerchantSel").value;
+  if(v===MERCHANT_CUSTOM) return $("fMerchantCustom").value.trim();
+  return (v||"").trim();
+}
+function setMerchantValue(name){
+  name=zhMerchant((name||"").trim());
+  var sel=$("fMerchantSel");
+  if(!name){ sel.value=""; $("fMerchantCustom").value=""; syncMerchantCustom(); return; }
+  var hit=null;
+  merchants.forEach(function(m){ if(m.name===name || zhMerchant(m.name)===name) hit=m; });
+  if(hit){ sel.value=zhMerchant(hit.name); $("fMerchantCustom").value=""; }
+  else { sel.value=MERCHANT_CUSTOM; $("fMerchantCustom").value=name; }
+  syncMerchantCustom();
+}
+$("fMerchantSel").addEventListener("change",function(){
+  syncMerchantCustom();
+  var v=getMerchantValue();
+  merchants.forEach(function(m){ if(zhMerchant(m.name)===v && curType!=="income"){ $("fCat").value=zhSub(m.cat); $("fNature").value=catNature(m.cat); } });
+  if($("fMerchantSel").value===MERCHANT_CUSTOM) $("fMerchantCustom").focus();
 });
 function refreshRefundPick(keyword){
   var kw=(keyword||"").toLowerCase();
@@ -1016,7 +1047,7 @@ function applyTemplate(t){
     if(t.cat) $("fCat").value=zhSub(t.cat);
     $("fNature").value=catNature(t.cat||"其他支出");
     if(t.acct) $("fAcct").value=t.acct;
-    $("fMerchant").value=t.merchant?zhMerchant(t.merchant):"";
+    setMerchantValue(t.merchant?zhMerchant(t.merchant):"");
     $("fNote").value=t.note||"";
     if(t.amt) $("fAmt").value=t.amt;
   }
@@ -1032,7 +1063,7 @@ $("btnAdd").addEventListener("click",function(){
       applyBalance(old,-1);
       old.type=curType; old.date=$("fDate").value||todayStr(); old.amt=Math.round(amt*100)/100;
       old.cat=$("fCat").value; old.nature=$("fNature").value; old.acct=$("fAcct").value;
-      old.merchant=$("fMerchant").value.trim(); old.note=$("fNote").value.trim();
+      old.merchant=getMerchantValue(); old.note=$("fNote").value.trim();
       old.linkedTo= curType==="refund" ? ($("fRefundPick").value||null) : null; old.updatedAt=Date.now();
       applyBalance(old,1);
       msg.textContent="已更新："+fmt(old.amt)+"（"+old.cat+"）"; msg.className="msg ok";
@@ -1044,7 +1075,7 @@ $("btnAdd").addEventListener("click",function(){
   }
   var t={ id:seq++, type:curType, date:$("fDate").value||todayStr(), amt:Math.round(amt*100)/100,
     cat:$("fCat").value, nature:$("fNature").value, acct:$("fAcct").value,
-    merchant:$("fMerchant").value.trim(), note:$("fNote").value.trim(),
+    merchant:getMerchantValue(), note:$("fNote").value.trim(),
     linkedTo: curType==="refund" ? ($("fRefundPick").value||null) : null, updatedAt:Date.now() };
   txns.push(t); applyBalance(t,1);
   msg.textContent=(editingId?"已更新：":"已保存：")+(t.type==="income"?"收入":t.type==="refund"?"退款":"支出")+" "+fmt(t.amt)+"（"+t.cat+"）"; msg.className="msg ok";
@@ -1053,7 +1084,7 @@ $("btnAdd").addEventListener("click",function(){
 });
 $("btnSaveTpl").addEventListener("click",function(){
   var name=$("fNote").value.trim()||$("fCat").value;
-  templates.push({name:name, type:curType, cat:$("fCat").value, amt:parseFloat($("fAmt").value)||null, acct:$("fAcct").value, merchant:$("fMerchant").value.trim(), note:$("fNote").value.trim()});
+  templates.push({name:name, type:curType, cat:$("fCat").value, amt:parseFloat($("fAmt").value)||null, acct:$("fAcct").value, merchant:getMerchantValue(), note:$("fNote").value.trim()});
   $("addMsg").textContent="已存为模板："+name; $("addMsg").className="msg ok";
   settingsDirty=true; renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync();
 });
