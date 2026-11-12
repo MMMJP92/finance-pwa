@@ -558,13 +558,14 @@ accounts.forEach(function(a){ baseBals[a.id] = a.bal; });
 var lastSyncAt = 0;        /* Last successful sync timestamp (ms) */
 var deletedKeys = [];      /* Tombstones for deleted records {key, deletedAt}, propagated via sync */
 var settingsDirty = false; /* Flag for non-transaction changes (budgets/templates/merchants) pending sync */
+var zhMigrated = false;    /* One-time flag: English (pre-Chinese UI) saved names have been migrated to Chinese */
 function dedupeKey(t){ return t.date + "|" + t.amt + "|" + (t.note || ""); }
 function saveLocal(){
   try{
     localStorage.setItem(LS_KEY, JSON.stringify({
       accounts:accounts, txns:txns, budgets:budgets, merchants:merchants,
       templates:templates, holdings:holdings, seq:seq, baseBals:baseBals,
-      lastSyncAt:lastSyncAt, deletedKeys:deletedKeys
+      lastSyncAt:lastSyncAt, deletedKeys:deletedKeys, zhMigrated:zhMigrated
     }));
   }catch(e){ /* If storage is unavailable, fall back to memory only; do not block bookkeeping */ }
 }
@@ -584,10 +585,118 @@ function loadLocal(){
     baseBals = s.baseBals || baseBals;
     lastSyncAt = s.lastSyncAt || 0;
     deletedKeys = s.deletedKeys || [];
+    zhMigrated = !!s.zhMigrated;
     return true;
   }catch(e){ return false; }
 }
 loadLocal();
+
+/* ==================== One-time migration: English saved names -> Chinese ==================== */
+/* The English UI version saved category / subcategory / merchant / account / template names in
+   English into the same localStorage key. On first launch of the Chinese version, translate those
+   stored names back to Chinese exactly once (flag zhMigrated, persisted with the state).
+   Amounts, dates, notes, ids and balances are never touched — dedupe keys (date|amt|note) stay valid.
+   Brand names that are English by nature (No Frills, Costco, Rogers, Walmart…) are deliberately
+   absent from the maps and therefore stay unchanged. The zh* helpers are also used as a display
+   fallback, so any English name arriving later (cloud merge / JSON import) still renders in Chinese. */
+var EN_ZH_SUB = {
+  "Rent":"房租","Utilities":"水电煤气","Property Insurance":"物业保险","Maintenance and Repairs":"维修保养",
+  "Meals Out":"早午晚餐","Groceries":"超市买菜","Drinks and Tobacco":"烟酒茶饮料",
+  "Everyday Shopping":"日常购物","Clothing and Accessories":"鞋帽包包","Electronics":"数码装备",
+  "Gas":"加油","Car Maintenance":"汽车保养维修","Car Insurance":"车保","Transit and Rideshare":"公共交通/打车",
+  "Phone Bill":"手机费","Internet Bill":"上网费","Subscriptions":"订阅费",
+  "Travel and Vacation":"旅游度假","Entertainment":"休闲玩乐",
+  "Medical Treatment":"治疗费","Pharmacy and Medication":"药品费",
+  "Gifts and Hosting":"送礼请客","Bank Fees":"银行手续","Other Expenses":"其他支出",
+  "Salary Income":"工资收入","Interest Income":"利息收入","Other Income":"其他收入",
+  "Windfall":"意外来钱","Gift Money":"礼金","Tax Refund":"退税",
+  "Car Expenses":"汽车保养维修","Dining Out":"早午晚餐","Fuel":"加油","Bank Fee":"银行手续"
+};
+var EN_ZH_GROUP = {
+  "Housing":"居住","Food and Dining":"餐饮","Shopping":"购物","Transportation":"交通",
+  "Communications and Subscriptions":"通讯订阅","Leisure and Travel":"休闲旅行",
+  "Health and Medical":"健康医疗","Social and Finance":"人情往来",
+  "Other Expenses":"其他","Other":"其他","Income":"收入","Monthly Total":"月度总计"
+};
+var EN_ZH_ACCT = {
+  "TD Chequing":"TD 支票账户","Rogers Master":"Rogers 万事达卡","Rogers Mastercard":"Rogers 万事达卡","Rogers MasterCard":"Rogers 万事达卡",
+  "TD Cash Back":"TD 返现卡","CIBC Costco Master":"CIBC Costco 万事达卡","CIBC Costco Mastercard":"CIBC Costco 万事达卡",
+  "Cash CAD":"现金加元","Cash USD":"现金美元","TD for Rent":"房租预留","TD to Lili":"给 Lili 预留",
+  "Scotia Chequing":"Scotia 支票账户","Scotia Saving":"Scotia 储蓄账户","Scotia Savings":"Scotia 储蓄账户",
+  "ICBC Chequing":"ICBC 支票账户","ICBC Saving":"ICBC 储蓄账户","ICBC Savings":"ICBC 储蓄账户",
+  "Rent Reserve":"房租预留","Reserve for Lili":"给 Lili 预留"
+};
+var EN_ZH_KIND = {
+  "Bank - Chequing":"银行 · 支票","Credit Card":"信用卡","Cash":"现金",
+  "Investment - Registered":"投资 · 注册账户","Investment - Unfunded":"投资 · 未注资","Bank (Old)":"银行（旧）",
+  "Virtual - Rent Reserve":"虚拟 · 房租预留","Virtual - Reserve":"虚拟 · 预留"
+};
+var EN_ZH_MERCHANT = { "T&T Supermarket":"大统华", "Xinhuadu":"新华都", "Xinda":"信达" };
+var EN_ZH_TPL = {
+  "Rent":"房租","Reserve Rent (Transfer)":"预留房租（转账）","Salary Income":"工资收入","Gas":"加油",
+  "Groceries":"买菜","Meals Out":"外出就餐","Phone Bill":"手机费","Internet":"上网费","Internet Bill":"上网费",
+  "Car Insurance":"车保险","Subscriptions":"订阅","Everyday Shopping":"日常购物",
+  "Pay Rogers Master":"还 Rogers 卡","Pay TD Cash Back":"还 TD 返现卡","Pay CIBC Costco":"还 CIBC Costco 卡"
+};
+var EN_ZH_HOLDING = {
+  "TFSA GIC (Oct 2026)":"TFSA 定期存款（2026年10月）","TFSA GIC (Jan 2026)":"TFSA 定期存款（2026年1月）",
+  "TDB887 Balanced Growth Fund":"TDB887 平衡增长基金","GIC":"定期存款","Fund":"基金"
+};
+function zhSub(v){
+  if(!v) return v;
+  if(EN_ZH_SUB[v]) return EN_ZH_SUB[v];
+  if(/^Tax Ref/.test(v)) return "退税";
+  if(EN_ZH_GROUP[v]) return EN_ZH_GROUP[v];
+  return v;
+}
+function zhGroup(v){
+  if(!v) return v;
+  if(EN_ZH_GROUP[v]) return EN_ZH_GROUP[v];
+  if(EN_ZH_SUB[v]){
+    var z = EN_ZH_SUB[v];
+    for(var i=0;i<CATS.length;i++){ for(var j=0;j<CATS[i].subs.length;j++){ if(CATS[i].subs[j][0]===z) return CATS[i].g; } }
+    if(z==="其他支出") return "其他";
+    return z;
+  }
+  return v;
+}
+function zhMerchant(v){ if(!v) return v; return EN_ZH_MERCHANT[v] || v; }
+function zhTplName(v){ if(!v) return v; return EN_ZH_TPL[v] || EN_ZH_SUB[v] || v; }
+function zhNatureTarget(v){
+  var m = {"Fixed":"fixed","Flexible":"flex","Flex":"flex","One-off":"once","One-Off":"once","One Off":"once"};
+  return m[v] || v;
+}
+function zhTxnFields(t){
+  if(!t) return t;
+  if(t.cat && t.cat!=="Transfer") t.cat = zhSub(t.cat);
+  if(t.merchant) t.merchant = zhMerchant(t.merchant);
+  return t;
+}
+function translateDataInPlace(){
+  var before = JSON.stringify([accounts,txns,budgets,merchants,templates,holdings]);
+  accounts.forEach(function(a){ a.name = EN_ZH_ACCT[a.name] || a.name; a.kind = EN_ZH_KIND[a.kind] || a.kind; });
+  txns.forEach(zhTxnFields);
+  budgets.forEach(function(b){
+    if(b.dim==="category") b.target = zhGroup(b.target);
+    else if(b.dim==="total" && b.target==="Monthly Total") b.target = "月度总计";
+    else if(b.dim==="nature") b.target = zhNatureTarget(b.target);
+  });
+  merchants.forEach(function(m){ m.name = zhMerchant(m.name); m.cat = zhSub(m.cat); });
+  templates.forEach(function(t){
+    t.name = zhTplName(t.name);
+    if(t.cat) t.cat = zhSub(t.cat);
+    if(t.merchant) t.merchant = zhMerchant(t.merchant);
+  });
+  holdings.forEach(function(h){ h.name = EN_ZH_HOLDING[h.name] || h.name; h.type = EN_ZH_HOLDING[h.type] || h.type; });
+  return before !== JSON.stringify([accounts,txns,budgets,merchants,templates,holdings]);
+}
+if(!zhMigrated){
+  var zhChanged = false;
+  try{ zhChanged = translateDataInPlace(); }catch(e){}
+  zhMigrated = true;
+  if(zhChanged) settingsDirty = true; /* Push the migrated names back to OneDrive on the next sync */
+  try{ saveLocal(); }catch(e){}
+}
 
 /* ==================== Utilities ==================== */
 function $(id){return document.getElementById(id);}
@@ -595,16 +704,20 @@ function fmt(n){return "CAD $" + Number(n).toLocaleString("en-CA",{minimumFracti
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function catGroup(sub){
+  var raw = sub;
+  sub = zhSub(sub);
+  if(raw && EN_ZH_GROUP[raw] && EN_ZH_GROUP[raw]!=="收入") return EN_ZH_GROUP[raw];
   for(var i=0;i<CATS.length;i++){for(var j=0;j<CATS[i].subs.length;j++){if(CATS[i].subs[j][0]===sub)return CATS[i].g;}}
-  return "其他支出";
+  return "其他";
 }
 function catNature(sub){
+  sub = zhSub(sub);
   for(var i=0;i<CATS.length;i++){for(var j=0;j<CATS[i].subs.length;j++){if(CATS[i].subs[j][0]===sub)return CATS[i].subs[j][1];}}
   for(var k=0;k<INCOME_CATS.length;k++){if(INCOME_CATS[k][0]===sub)return INCOME_CATS[k][1];}
   return "flex";
 }
 function acctById(id){for(var i=0;i<accounts.length;i++)if(accounts[i].id===id)return accounts[i];return null;}
-function acctName(id){var a=acctById(id);return a?a.name:id;}
+function acctName(id){var a=acctById(id);return a?(EN_ZH_ACCT[a.name]||a.name):id;}
 
 /* ==================== Tabs ==================== */
 var tabs=document.querySelectorAll(".tab");
@@ -674,8 +787,8 @@ function spentFor(b){
     var v = t.type==="expense"? t.amt : (t.type==="refund"? -t.amt : 0);
     if(!v) return;
     if(b.dim==="total") s+=v;
-    if(b.dim==="category" && catGroup(t.cat)===b.target) s+=v;
-    if(b.dim==="nature" && t.nature===b.target) s+=v;
+    if(b.dim==="category" && catGroup(t.cat)===zhGroup(b.target)) s+=v;
+    if(b.dim==="nature" && t.nature===zhNatureTarget(b.target)) s+=v;
   });
   return Math.max(0,s);
 }
@@ -710,7 +823,7 @@ function renderSummary(){
 function budgetRowHTML(b, editable){
   var spent=spentFor(b), pct=b.amt>0?Math.min(100, Math.round(spent/b.amt*100)):0;
   var cls=spent>b.amt?"over":(pct>=80?"warn":"");
-  var label=b.dim==="total"?"月度总计":(b.dim==="nature"?("性质 · "+NATURE_NAME[b.target]):("分类 · "+b.target));
+  var label=b.dim==="total"?"月度总计":(b.dim==="nature"?("性质 · "+(NATURE_NAME[zhNatureTarget(b.target)]||b.target)):("分类 · "+zhGroup(b.target)));
   var over=spent>b.amt?' <span class="pill" style="background:var(--red-soft);color:var(--red)">超出 '+fmt(spent-b.amt)+"</span>":"";
   return '<div class="brow"><div class="head"><span>'+esc(label)+over+'</span><span>'+fmt(spent)+' / '+fmt(b.amt)+'</span></div>'+
     '<div class="bar"><i class="'+cls+'" style="width:'+pct+'%"></i></div>'+
@@ -740,7 +853,7 @@ function txnHTML(t){
     var amtTxt=fmt(t.amt)+(t.amtIn&&t.amtIn!==t.amt?" → "+fmt(t.amtIn):"");
     return '<div class="txn-wrap"><div class="txn-actions"><button class="act-del" data-del="'+t.id+'">删除</button></div><div class="txn" data-swipe="1"><div class="grow"><b>'+esc(title)+'</b><div class="meta">'+meta+'</div></div><div class="amt">'+amtTxt+'</div><button class="del" data-del="'+t.id+'">删除</button></div></div>';
   }
-  title=(t.merchant?esc(t.merchant)+" · ":"")+esc(t.cat);
+  title=(t.merchant?esc(zhMerchant(t.merchant))+" · ":"")+esc(zhSub(t.cat));
   meta=t.date+" · "+typeName+" · "+esc(acctName(t.acct))+(t.note?" · "+esc(t.note):"")+(t.linkedTo?" · 已关联原支出":"");
   return '<div class="txn-wrap"><div class="txn-actions"><button class="act-edit" data-edit="'+t.id+'">编辑</button><button class="act-del" data-del="'+t.id+'">删除</button></div><div class="txn" data-swipe="2"><div class="grow"><b>'+title+'</b> <span class="tag '+t.nature+'">'+NATURE_NAME[t.nature]+'</span><div class="meta">'+meta+'</div></div><div class="amt '+cls+'">'+sign+" "+fmt(t.amt)+'</div><button class="del" data-del="'+t.id+'">删除</button></div></div>';
 }
@@ -796,7 +909,7 @@ function applyBalance(t, dir){
 }
 function renderAccounts(){
   function row(a){
-    return '<div class="acct"><div><b>'+esc(a.name)+'</b> '+(a.virtual?'<span class="pill amber">虚拟 · 不计可用</span>':"")+'<div class="meta" style="font-size:12.5px;color:var(--muted)">'+esc(a.kind)+" · "+a.ccy+'</div></div><div class="bal">'+fmt(a.bal)+'</div></div>';
+    return '<div class="acct"><div><b>'+esc(EN_ZH_ACCT[a.name]||a.name)+'</b> '+(a.virtual?'<span class="pill amber">虚拟 · 不计可用</span>':"")+'<div class="meta" style="font-size:12.5px;color:var(--muted)">'+esc(EN_ZH_KIND[a.kind]||a.kind)+" · "+a.ccy+'</div></div><div class="bal">'+fmt(a.bal)+'</div></div>';
   }
   $("acctList").innerHTML=accounts.filter(function(a){return !a.archived && !a.virtual;}).map(row).join("");
   $("virtualList").innerHTML=accounts.filter(function(a){return a.virtual;}).map(row).join("");
@@ -804,14 +917,14 @@ function renderAccounts(){
 }
 function renderInvest(){
   $("holdBody").innerHTML=holdings.map(function(h){
-    return "<tr><td><b>"+esc(h.name)+"</b></td><td>"+esc(h.type)+"</td><td class='num'>"+esc(h.detail)+"</td><td class='num'>"+esc(h.rate)+"</td><td>"+esc(h.note)+"</td><td class='num'>"+fmt(h.value)+"</td></tr>";
+    return "<tr><td><b>"+esc(EN_ZH_HOLDING[h.name]||h.name)+"</b></td><td>"+esc(EN_ZH_HOLDING[h.type]||h.type)+"</td><td class='num'>"+esc(h.detail)+"</td><td class='num'>"+esc(h.rate)+"</td><td>"+esc(h.note)+"</td><td class='num'>"+fmt(h.value)+"</td></tr>";
   }).join("");
   var total=holdings.reduce(function(s,h){return s+h.value;},0);
   $("holdTotal").textContent=fmt(total);
   var now=new Date();
   $("gicCountdown").innerHTML=holdings.filter(function(h){return h.maturity;}).map(function(h){
     var days=Math.ceil((new Date(h.maturity+"T00:00:00")-now)/86400000);
-    return '<div style="display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0"><span>'+esc(h.name)+'</span><b>'+h.maturity+' · 剩 '+days+' 天</b></div>';
+    return '<div style="display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:6px 0"><span>'+esc(EN_ZH_HOLDING[h.name]||h.name)+'</span><b>'+h.maturity+' · 剩 '+days+' 天</b></div>';
   }).join("");
 }
 function renderCats(){
@@ -821,26 +934,26 @@ function renderCats(){
 }
 function renderMerchants(){
   $("merchantGrid").innerHTML=merchants.map(function(m,i){
-    return '<button class="mcard" data-merchant="'+i+'"><b>'+esc(m.name)+'</b><span>'+esc(m.cat)+'</span></button>';
+    return '<button class="mcard" data-merchant="'+i+'"><b>'+esc(zhMerchant(m.name))+'</b><span>'+esc(zhSub(m.cat))+'</span></button>';
   }).join("");
   document.querySelectorAll("[data-merchant]").forEach(function(b){
     b.addEventListener("click",function(){
       var m=merchants[Number(b.getAttribute("data-merchant"))];
       setType("expense");
-      $("fMerchant").value=m.name; $("fCat").value=m.cat; $("fNature").value=catNature(m.cat);
+      $("fMerchant").value=zhMerchant(m.name); $("fCat").value=zhSub(m.cat); $("fNature").value=catNature(m.cat);
       gotoTab("book"); $("fAmt").focus();
     });
   });
 }
 function renderTemplates(){
   $("tplChips").innerHTML=templates.map(function(t,i){
-    return '<button class="chip" data-tpl="'+i+'">'+esc(t.name)+(t.amt?("<small>"+fmt(t.amt)+"</small>"):"")+"</button>";
+    return '<button class="chip" data-tpl="'+i+'">'+esc(zhTplName(t.name))+(t.amt?("<small>"+fmt(t.amt)+"</small>"):"")+"</button>";
   }).join("");
   document.querySelectorAll("[data-tpl]").forEach(function(b){
     b.addEventListener("click",function(){ applyTemplate(templates[Number(b.getAttribute("data-tpl"))]); });
   });
   $("tplManage").innerHTML=templates.map(function(t,i){
-    return '<div class="txn"><div class="grow"><b>'+esc(t.name)+'</b><div class="meta">'+(t.type==="transfer"?"转账":t.cat)+(t.amt?" · "+fmt(t.amt):"")+" · "+esc(acctName(t.acct))+'</div></div><button class="del" data-tpldel="'+i+'">删除</button></div>';
+    return '<div class="txn"><div class="grow"><b>'+esc(zhTplName(t.name))+'</b><div class="meta">'+(t.type==="transfer"?"转账":esc(zhSub(t.cat)))+(t.amt?" · "+fmt(t.amt):"")+" · "+esc(acctName(t.acct))+'</div></div><button class="del" data-tpldel="'+i+'">删除</button></div>';
   }).join("");
   document.querySelectorAll("[data-tpldel]").forEach(function(b){
     b.addEventListener("click",function(){ templates.splice(Number(b.getAttribute("data-tpldel")),1); settingsDirty=true; renderTemplates(); saveLocal(); updateSyncUI(); scheduleAutoSync(); });
@@ -856,7 +969,7 @@ function startEdit(id){
   if(!t || t.type === "transfer") return;
   editingId = id;
   setType(t.type);
-  $("fDate").value = t.date; $("fAmt").value = t.amt; $("fCat").value = t.cat;
+  $("fDate").value = t.date; $("fAmt").value = t.amt; $("fCat").value = zhSub(t.cat);
   $("fNature").value = t.nature; $("fAcct").value = t.acct;
   $("fMerchant").value = t.merchant || ""; $("fNote").value = t.note || "";
   $("btnAdd").textContent = "保存修改";
@@ -886,7 +999,7 @@ function refreshRefundPick(keyword){
   txns.filter(function(t){return t.type==="expense";}).forEach(function(t){
     var hay=(t.merchant+" "+t.note+" "+t.cat+" "+t.amt).toLowerCase();
     if(kw && hay.indexOf(kw)<0) return;
-    opts+='<option value="'+t.id+'">'+t.date+" · "+esc(t.cat)+" · "+fmt(t.amt)+(t.merchant?" · "+esc(t.merchant):"")+(t.note?" · "+esc(t.note):"")+"</option>";
+    opts+='<option value="'+t.id+'">'+t.date+" · "+esc(zhSub(t.cat))+" · "+fmt(t.amt)+(t.merchant?" · "+esc(zhMerchant(t.merchant)):"")+(t.note?" · "+esc(t.note):"")+"</option>";
   });
   $("fRefundPick").innerHTML=opts;
 }
@@ -900,10 +1013,10 @@ function applyTemplate(t){
     $("tNote").value=t.note||"";
   } else {
     setType(t.type);
-    if(t.cat) $("fCat").value=t.cat;
+    if(t.cat) $("fCat").value=zhSub(t.cat);
     $("fNature").value=catNature(t.cat||"其他支出");
     if(t.acct) $("fAcct").value=t.acct;
-    $("fMerchant").value=t.merchant||"";
+    $("fMerchant").value=t.merchant?zhMerchant(t.merchant):"";
     $("fNote").value=t.note||"";
     if(t.amt) $("fAmt").value=t.amt;
   }
@@ -1106,7 +1219,7 @@ function doImport(){
   if(pendingImport.json){
     var data=pendingImport.json, added=0;
     var seen={}; txns.forEach(function(t){ seen[t.date+"|"+t.amt+"|"+(t.note||"")]=true; });
-    data.txns.forEach(function(t){ var k=t.date+"|"+t.amt+"|"+(t.note||""); if(!seen[k]){ t.id=seq++; txns.push(t); applyBalance(t,1); added++; } });
+    data.txns.forEach(function(t){ zhTxnFields(t); var k=t.date+"|"+t.amt+"|"+(t.note||""); if(!seen[k]){ t.id=seq++; txns.push(t); applyBalance(t,1); added++; } });
     box.innerHTML="<p>已从数据文件合并 "+added+" 条新记录。</p>";
   } else {
     pendingImport.items.forEach(function(t){ txns.push(t); applyBalance(t,1); });
@@ -1250,6 +1363,7 @@ function mergeRemote(remote){
     });
   }
   seq = txns.reduce(function(m, t){ return Math.max(m, t.id || 0); }, seq) + 1;
+  try{ translateDataInPlace(); }catch(e){} /* Cloud copy may still hold English names; normalize on merge */
   recomputeBalances();
   return added;
 }
