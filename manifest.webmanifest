@@ -1,0 +1,26 @@
+{
+  "name": "财务管理",
+  "short_name": "财务管理",
+  "description": "记账 · 银行与信用卡 · 投资理财，数据同步到 OneDrive Finance/finance-data.json",
+  "lang": "zh-CN",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f6f3",
+  "theme_color": "#14532d",
+  "scope": "https://mmmjp92.github.io/finance-pwa/",
+  "start_url": "https://mmmjp92.github.io/finance-pwa/",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
