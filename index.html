@@ -1259,22 +1259,49 @@ function initMsal(){
   });
   return true;
 }
+/* When a token refresh needs interaction, an installed PWA (iPhone standalone)
+   cannot open a popup — window.open returns null and acquireTokenPopup throws
+   empty_window_error. So refresh via full-page redirect instead: before jumping
+   to Microsoft, record that a sync was in progress; when the redirect returns,
+   restoreAccount() sees the flag and resumes that sync automatically. */
+var SYNC_RESUME_KEY = "finance-pwa-resume-sync";
+function markSyncResume(){
+  try{ localStorage.setItem(SYNC_RESUME_KEY, String(Date.now())); }catch(e){}
+}
+function takeSyncResume(){
+  try{
+    var v = localStorage.getItem(SYNC_RESUME_KEY);
+    localStorage.removeItem(SYNC_RESUME_KEY);
+    return !!v && (Date.now() - Number(v) < 10 * 60 * 1000); /* Ignore stale flags older than 10 minutes */
+  }catch(e){ return false; }
+}
 function restoreAccount(){
   if(!initMsal()) return;
   msalApp.handleRedirectPromise().then(function(resp){
+    var resumeSync = takeSyncResume();
     var accs = msalApp.getAllAccounts();
     if(resp && resp.account) odAccount = resp.account;
     else if(accs.length) odAccount = accs[0];
     if(odAccount) msalApp.setActiveAccount(odAccount);
     updateSyncUI();
-    if(odAccount && navigator.onLine) syncNow(true);
-  }).catch(function(){ updateSyncUI(); });
+    if(odAccount && navigator.onLine){
+      if(resumeSync) setSyncMsg("登录已返回，继续刚才未完成的同步…");
+      syncNow(true); /* Covers both the normal auto-sync and resuming a sync interrupted by the login redirect */
+    }
+  }).catch(function(){ takeSyncResume(); updateSyncUI(); });
 }
 function getToken(){
   var req = { scopes: OD_SCOPES, account: odAccount || undefined };
   return msalApp.acquireTokenSilent(req).catch(function(err){
-    if(err instanceof msal.InteractionRequiredAuthError || (err && err.errorCode === "interaction_required")){
-      return msalApp.acquireTokenPopup(req).then(function(r){ if(r.account) odAccount = r.account; return r; });
+    var needsInteraction = err instanceof msal.InteractionRequiredAuthError ||
+      (err && (err.errorCode === "interaction_required" || err.errorCode === "login_required" || err.errorCode === "consent_required"));
+    if(needsInteraction){
+      markSyncResume();
+      var redirecting = new Error("redirecting_to_login");
+      redirecting.code = "redirecting";
+      /* The page navigates away to Microsoft here; the promise outcome is moot —
+         normalize both paths to the "redirecting" signal syncNow() understands. */
+      return msalApp.acquireTokenRedirect(req).then(function(){ throw redirecting; }, function(){ throw redirecting; });
     }
     throw err;
   });
@@ -1376,8 +1403,12 @@ function syncNow(auto){
     renderAll();
     setSyncMsg("同步完成" + (added ? "：从云端合并 " + added + " 条新记录。" : "：已是最新。"), true);
   }).catch(function(err){
+    if(err && err.code === "redirecting"){ /* Page is leaving for Microsoft sign-in; sync resumes on return */
+      setSyncMsg("正在跳转到微软登录，登录后自动返回并继续同步…");
+      return;
+    }
     var msg = (err && (err.errorMessage || err.message)) || String(err);
-    if(/AADSTS50011|redirect/i.test(msg)) msg = "跳转地址不匹配（AADSTS50011）：按「安装 / 连接」第 2–3 步在 Azure 加单页应用跳转地址后重试。";
+    if(/AADSTS50011|redirect_uri/i.test(msg)) msg = "跳转地址不匹配（AADSTS50011）：按「安装 / 连接」第 2–3 步在 Azure 加单页应用跳转地址后重试。";
     setSyncMsg("同步失败：" + msg + "。数据在本地安全，稍后点立即同步重试。", false);
   }).then(function(){ syncing = false; updateSyncUI(); });
 }
