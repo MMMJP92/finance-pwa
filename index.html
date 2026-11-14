@@ -440,6 +440,10 @@ var CATS = [
 var INCOME_CATS = [["工资收入","fixed"],["利息收入","once"],["其他收入","once"],["意外来钱","once"],["礼金","once"],["退税","once"]];
 var NATURE_NAME = {fixed:"固定", flex:"灵活", once:"一次性"};
 
+/* Blank seed template — real data lives only in local storage and OneDrive
+   (Finance/finance-data.json). These seeds apply ONLY on a fresh install with no
+   local state and no cloud copy; loadLocal() and mergeRemote() always win over
+   them whenever user data exists, so the blank seed can never wipe real data. */
 var accounts = [
   {id:"td-cheq", name:"TD Chequing", kind:"银行 · 支票", ccy:"CAD", bal:0, virtual:false, archived:false},
   {id:"rogers", name:"Rogers Master", kind:"信用卡", ccy:"CAD", bal:0, virtual:false, archived:false},
@@ -447,7 +451,7 @@ var accounts = [
   {id:"cibc", name:"CIBC Costco Master", kind:"信用卡", ccy:"CAD", bal:0, virtual:false, archived:false},
   {id:"cash-cad", name:"Cash CAD", kind:"现金", ccy:"CAD", bal:0, virtual:false, archived:false},
   {id:"cash-usd", name:"Cash USD", kind:"现金", ccy:"USD", bal:0, virtual:false, archived:false},
-  {id:"tfsa", name:"TD TFSA", kind:"投资 · 注册账户", ccy:"CAD", bal:28245, virtual:false, archived:false},
+  {id:"tfsa", name:"TD TFSA", kind:"投资 · 注册账户", ccy:"CAD", bal:0, virtual:false, archived:false},
   {id:"fhsa", name:"TD FHSA", kind:"投资 · 未注资", ccy:"CAD", bal:0, virtual:false, archived:false},
   {id:"rent", name:"房租预留", kind:"虚拟 · 房租预留", ccy:"CAD", bal:0, virtual:true, archived:false},
   {id:"tolili", name:"给 Lili 预留", kind:"虚拟 · 预留", ccy:"CAD", bal:0, virtual:true, archived:false},
@@ -456,11 +460,7 @@ var accounts = [
   {id:"icbc-c", name:"ICBC Chequing", kind:"银行（旧）", ccy:"CAD", bal:0, virtual:false, archived:true},
   {id:"icbc-s", name:"ICBC Savings", kind:"银行（旧）", ccy:"CAD", bal:0, virtual:false, archived:true}
 ];
-var holdings = [
-  {name:"TFSA 定期存款（2026年10月）", type:"定期存款", detail:"本金 CAD $16,245", rate:"3.10%", note:"2026-10-09 → 2027-10-09", maturity:"2027-10-09", value:16245},
-  {name:"TFSA 定期存款（2026年1月）", type:"定期存款", detail:"本金 CAD $7,000", rate:"2.75%", note:"2026-01-19 → 2027-03-20", maturity:"2027-03-20", value:7000},
-  {name:"TDB887 平衡增长基金", type:"基金", detail:"194.856 份", rate:"买入净值 $25.66 · MER 2.02%", note:"分红再投 · 成交 2026-10-19", maturity:null, value:5000}
-];
+var holdings = []; /* Blank template: no preset holdings; the investments page structure is unchanged */
 var merchants = [
   ["No Frills","超市买菜"],["Costco","超市买菜"],["大统华","超市买菜"],["Walmart","超市买菜"],
   ["Food Basics","超市买菜"],["FreshCo","超市买菜"],["Metro","超市买菜"],["RCSS","超市买菜"],
@@ -470,8 +470,8 @@ var merchants = [
 ].map(function(m){return {name:m[0], cat:m[1]};});
 
 var templates = [
-  {name:"房租", type:"expense", cat:"房租", amt:2100, acct:"rent", merchant:"", note:"房租"},
-  {name:"预留房租（转账）", type:"transfer", cat:"", amt:2100, acct:"td-cheq", to:"rent", merchant:"", note:"预留房租"},
+  {name:"房租", type:"expense", cat:"房租", amt:null, acct:"rent", merchant:"", note:"房租"},
+  {name:"预留房租（转账）", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"rent", merchant:"", note:"预留房租"},
   {name:"工资收入", type:"income", cat:"工资收入", amt:null, acct:"td-cheq", merchant:"", note:"工资"},
   {name:"加油", type:"expense", cat:"加油", amt:null, acct:"rogers", merchant:"Petro-Canada Gas Station", note:"加油"},
   {name:"买菜", type:"expense", cat:"超市买菜", amt:null, acct:"rogers", merchant:"No Frills", note:"买菜"},
@@ -485,14 +485,7 @@ var templates = [
   {name:"还 TD 返现卡", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"td-cb", merchant:"", note:"还信用卡"},
   {name:"还 CIBC Costco 卡", type:"transfer", cat:"", amt:null, acct:"td-cheq", to:"cibc", merchant:"", note:"还信用卡"}
 ];
-var budgets = [
-  {dim:"total", target:"月度总计", amt:3200},
-  {dim:"category", target:"餐饮", amt:900},
-  {dim:"category", target:"交通", amt:450},
-  {dim:"nature", target:"fixed", amt:2600},
-  {dim:"nature", target:"flex", amt:1200},
-  {dim:"nature", target:"once", amt:400}
-];
+var budgets = []; /* Blank template: no preset budgets */
 var txns = []; /* Records added/imported during this session */
 var seq = 1;
 
@@ -536,7 +529,7 @@ function loadLocal(){
     return true;
   }catch(e){ return false; }
 }
-loadLocal();
+var hadLocalData = loadLocal(); /* True when this device already holds the user's data; the blank seed above is then fully replaced by it */
 
 /* ==================== One-time migration: English saved names -> Chinese ==================== */
 /* The English UI version saved category / subcategory / merchant / template names in
@@ -1324,11 +1317,11 @@ function recomputeBalances(){
   txns.slice().sort(function(a,b){ return (a.updatedAt||0) - (b.updatedAt||0); }).forEach(function(t){ applyBalance(t, 1); });
 }
 function mergeRemote(remote){
-  if(!remote || !remote.txns) return 0;
+  if(!remote) return 0;
   var localMap = {}, merged = [], added = 0;
   txns.forEach(function(t){ localMap[dedupeKey(t)] = t; });
   var remoteMap = {};
-  remote.txns.forEach(function(t){ remoteMap[dedupeKey(t)] = t; });
+  (remote.txns || []).forEach(function(t){ remoteMap[dedupeKey(t)] = t; });
   var allKeys = {};
   Object.keys(localMap).forEach(function(k){ allKeys[k] = 1; });
   Object.keys(remoteMap).forEach(function(k){ allKeys[k] = 1; });
@@ -1351,6 +1344,19 @@ function mergeRemote(remote){
     remote.accounts.forEach(function(ra){
       if(!acctById(ra.id)){ accounts.push(ra); if(remote.baseBals && remote.baseBals[ra.id] != null) baseBals[ra.id] = remote.baseBals[ra.id]; }
     });
+  }
+  /* Fresh install (no local state at all): the seed in this file is a blank template, so
+     adopt the cloud copy wholesale — accounts, opening balances, budgets, templates,
+     merchants and holdings — instead of pushing the blank seed back over the user's
+     real data in OneDrive. Runs once; afterwards local state exists and is authoritative. */
+  if(!hadLocalData){
+    if(remote.accounts && remote.accounts.length) accounts = remote.accounts;
+    if(remote.baseBals) baseBals = remote.baseBals;
+    if(remote.budgets) budgets = remote.budgets;
+    if(remote.merchants && remote.merchants.length) merchants = remote.merchants;
+    if(remote.templates) templates = remote.templates;
+    if(remote.holdings) holdings = remote.holdings;
+    hadLocalData = true;
   }
   seq = txns.reduce(function(m, t){ return Math.max(m, t.id || 0); }, seq) + 1;
   try{ translateDataInPlace(); }catch(e){} /* Cloud copy may still hold English names; normalize on merge */
@@ -1385,7 +1391,7 @@ function connectOneDrive(){
   if(!initMsal()) return;
   if(odAccount){ setSyncMsg("已连接 OneDrive（" + (odAccount.username || "") + "）。点立即同步即可同步。", true); return; }
   setSyncMsg("正在跳转到微软登录，登录后自动返回本页…");
-  var loginReq = { scopes: OD_SCOPES, loginHint: "markpry92@hotmail.com", prompt: "select_account" };
+  var loginReq = { scopes: OD_SCOPES, prompt: "select_account" }; /* No preset email: the user picks their own Microsoft account */
   /* Redirect sign-in: same-page jump to Microsoft, which returns to this page;
      restoreAccount()'s handleRedirectPromise() picks up the account on load. */
   msalApp.loginRedirect(loginReq).catch(function(err){

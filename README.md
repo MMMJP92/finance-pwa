@@ -16,5 +16,6 @@ Add to Home Screen / Install app.
 ## Privacy
 
 This repository is public (required for GitHub Pages on a free account).
-The app ships with seeded sample accounts and holdings; each visitor runs
-their own copy and entries are stored on their own device, not shared.
+The app ships with an empty template (no preset balances, holdings, budgets or
+amounts); each visitor runs their own copy and entries are stored on their own
+device and their own OneDrive, not shared.
