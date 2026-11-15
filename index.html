@@ -489,6 +489,14 @@ var budgets = []; /* Blank template: no preset budgets */
 var txns = []; /* Records added/imported during this session */
 var seq = 1;
 
+/* Signature of the untouched blank template, captured before loadLocal() replaces
+   the seeds with stored state. A freshly installed home-screen PWA persists this
+   seed to its own localStorage on first launch (and the Microsoft login redirect
+   reloads the page), so "no stored state" alone cannot recognise it afterwards;
+   this signature lets sync tell "still the blank seed" apart from real user data. */
+var SEED_TPL_SIG = JSON.stringify(templates.map(function(t){ return t.name; }));
+var SEED_MERCH_SIG = JSON.stringify(merchants.map(function(m){ return m.name; }));
+
 /* ==================== Local Persistence ==================== */
 /* Data is stored only in the local browser (survives closing, reopening, and offline use) and synced to OneDrive.
    baseBals are opening balances independent of transactions (e.g., TFSA principal), used as the base when recomputing balances. */
@@ -1343,8 +1351,29 @@ function recomputeBalances(){
   accounts.forEach(function(a){ a.bal = baseBals[a.id] || 0; });
   txns.slice().sort(function(a,b){ return (a.updatedAt||0) - (b.updatedAt||0); }).forEach(function(t){ applyBalance(t, 1); });
 }
+/* True when local state is still the untouched blank seed: no records, no
+   holdings, no budgets, every balance and opening balance zero, and the
+   template / merchant lists unchanged from the template. Such a device holds
+   none of the user's data, whatever localStorage claims. */
+function isBlankSeedState(){
+  if(txns.length || holdings.length || budgets.length) return false;
+  for(var i=0;i<accounts.length;i++){ if(accounts[i].bal) return false; }
+  for(var k in baseBals){ if(baseBals[k]) return false; }
+  if(JSON.stringify(templates.map(function(t){ return t.name; })) !== SEED_TPL_SIG) return false;
+  if(JSON.stringify(merchants.map(function(m){ return m.name; })) !== SEED_MERCH_SIG) return false;
+  return true;
+}
+/* True when a cloud copy actually holds the user's data (any record, holding,
+   budget, or a non-zero balance / opening balance anywhere). */
+function remoteHasRealData(remote){
+  if(!remote) return false;
+  if((remote.txns && remote.txns.length) || (remote.holdings && remote.holdings.length) || (remote.budgets && remote.budgets.length)) return true;
+  if(remote.accounts && remote.accounts.some(function(a){ return !!a.bal; })) return true;
+  if(remote.baseBals){ for(var k in remote.baseBals){ if(remote.baseBals[k]) return true; } }
+  return false;
+}
 function mergeRemote(remote){
-  if(!remote) return 0;
+  if(!remote) return { added:0, adopted:false };
   var localMap = {}, merged = [], added = 0;
   txns.forEach(function(t){ localMap[dedupeKey(t)] = t; });
   var remoteMap = {};
@@ -1372,23 +1401,48 @@ function mergeRemote(remote){
       if(!acctById(ra.id)){ accounts.push(ra); if(remote.baseBals && remote.baseBals[ra.id] != null) baseBals[ra.id] = remote.baseBals[ra.id]; }
     });
   }
-  /* Fresh install (no local state at all): the seed in this file is a blank template, so
-     adopt the cloud copy wholesale — accounts, opening balances, budgets, templates,
-     merchants and holdings — instead of pushing the blank seed back over the user's
-     real data in OneDrive. Runs once; afterwards local state exists and is authoritative. */
-  if(!hadLocalData){
+  /* Adopt the cloud copy wholesale — accounts, opening balances, budgets, templates,
+     merchants and holdings — whenever this device holds none of the user's data:
+     either a true fresh install (no local state at all) or local state that is still
+     the untouched blank seed. The seed case is the home-screen PWA: its first launch
+     persists the blank seed to its own localStorage and the login redirect reloads
+     the page, so hadLocalData alone reads true there and the adoption never ran —
+     the seed's zero balances and empty holdings were treated as the source of truth
+     and the real cloud data never showed. Adoption requires the cloud to actually
+     hold real data, and syncNow() refuses to push while local is still blank and
+     the cloud has data, so the blank seed can never overwrite the good cloud copy. */
+  var adopted = false;
+  if((!hadLocalData || isBlankSeedState()) && remoteHasRealData(remote)){
     if(remote.accounts && remote.accounts.length) accounts = remote.accounts;
     if(remote.baseBals) baseBals = remote.baseBals;
     if(remote.budgets) budgets = remote.budgets;
     if(remote.merchants && remote.merchants.length) merchants = remote.merchants;
     if(remote.templates) templates = remote.templates;
     if(remote.holdings) holdings = remote.holdings;
+    /* Reconcile opening balances so the recomputed balances match the balances
+       stored in the cloud file exactly, even if the cloud baseBals are stale:
+       measure each account's transaction-only effect, then set its opening
+       balance to (cloud balance − that effect). No-op when baseBals are current. */
+    var remoteBal = {};
+    (remote.accounts || []).forEach(function(ra){ remoteBal[ra.id] = ra.bal || 0; });
+    var adoptedBase = baseBals; baseBals = {};
+    recomputeBalances(); /* Accounts now hold transaction-only effects */
+    accounts.forEach(function(a){
+      baseBals[a.id] = (remoteBal[a.id] != null) ? Math.round((remoteBal[a.id] - a.bal) * 100) / 100 : (adoptedBase[a.id] || 0);
+    });
     hadLocalData = true;
+    adopted = true;
+  } else {
+    /* Partial adoption: never leave a section empty when the cloud has it and
+       local has nothing there to lose (e.g. holdings / budgets only ever
+       synced from another device). */
+    if(!holdings.length && remote.holdings && remote.holdings.length) holdings = remote.holdings;
+    if(!budgets.length && remote.budgets && remote.budgets.length) budgets = remote.budgets;
   }
   seq = txns.reduce(function(m, t){ return Math.max(m, t.id || 0); }, seq) + 1;
   try{ translateDataInPlace(); }catch(e){} /* Cloud copy may still hold English names; normalize on merge */
   recomputeBalances();
-  return added;
+  return { added:added, adopted:adopted };
 }
 function syncNow(auto){
   if(syncing) return;
@@ -1396,13 +1450,26 @@ function syncNow(auto){
   if(!navigator.onLine){ if(!auto) setSyncMsg("当前离线。新记录存本地计入待同步，联网后自动推送。", false); return; }
   syncing = true; setSyncMsg("同步中…");
   pullRemote().then(function(remote){
-    var added = mergeRemote(remote);
-    return pushRemote().then(function(){ return added; });
-  }).then(function(added){
+    var res = mergeRemote(remote);
+    /* Safety net: if local is still the blank seed while the cloud holds real
+       data, the merge did not adopt — never push the blank seed over the good
+       cloud copy, and never report this state as "已是最新". */
+    if(remoteHasRealData(remote) && isBlankSeedState()){
+      var blocked = new Error("blank_local_cloud_has_data");
+      blocked.blockedPush = true;
+      throw blocked;
+    }
+    return pushRemote().then(function(){ return res; });
+  }).then(function(res){
     lastSyncAt = Date.now(); settingsDirty = false;
-    renderAll();
-    setSyncMsg("同步完成" + (added ? "：从云端合并 " + added + " 条新记录。" : "：已是最新。"), true);
+    renderAll(); /* Re-render everything so adopted cloud values show immediately */
+    setSyncMsg(res.adopted ? "同步完成：已从云端载入账户余额、持仓、预算与模板。" :
+      ("同步完成" + (res.added ? "：从云端合并 " + res.added + " 条新记录。" : "：已是最新。")), true);
   }).catch(function(err){
+    if(err && err.blockedPush){
+      setSyncMsg("同步未完成：云端有你的数据，但本地仍是空白模板，已停止推送以保护云端数据。点立即同步重试。", false);
+      return;
+    }
     if(err && err.code === "redirecting"){ /* Page is leaving for Microsoft sign-in; sync resumes on return */
       setSyncMsg("正在跳转到微软登录，登录后自动返回并继续同步…");
       return;
