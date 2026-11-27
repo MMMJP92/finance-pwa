@@ -192,6 +192,7 @@
   </div>
   <p class="msg" id="syncMsg" style="margin:6px 2px 0"></p>
   <p class="msg" id="swMsg" style="margin:2px 2px 0"></p>
+  <p class="msg err" id="fxMsg" style="margin:2px 2px 0"></p>
 
   <!-- ================= Tabs ================= -->
   <div class="tabs" role="tablist">
@@ -246,7 +247,7 @@
       <div id="formSimple">
         <div class="form-grid">
           <label><span>日期</span><input type="date" id="fDate"></label>
-          <label><span>金额（CAD）</span><input type="number" id="fAmt" step="0.01" min="0" placeholder="0.00"></label>
+          <label><span id="fAmtLabel">金额（CAD）</span><input type="number" id="fAmt" step="0.01" min="0" placeholder="0.00"></label>
           <label><span>分类</span><select id="fCat"></select></label>
           <label><span>性质</span><select id="fNature"><option value="fixed">固定</option><option value="flex">灵活</option><option value="once">一次性</option></select></label>
           <label><span>账户</span><select id="fAcct"></select></label>
@@ -316,6 +317,16 @@
     <div class="card">
       <h2>虚拟账户</h2>
       <div id="virtualList"></div>
+    </div>
+    <div class="card">
+      <h2>汇率（折算为 CAD）</h2>
+      <p class="hint">外币账户（如 Cash USD）按这里的汇率计入净资产、本月结余和预算。可参考加拿大央行每日汇率。</p>
+      <div class="form-grid">
+        <label><span>币种</span><select id="fxCcy"><option value="USD">USD</option><option value="CNY">CNY</option><option value="EUR">EUR</option></select></label>
+        <label><span>1 单位 = ? CAD</span><input type="number" id="fxRateIn" step="0.0001" min="0" placeholder="如 1.3800"></label>
+      </div>
+      <button class="btn small" id="fxSave">保存汇率</button>
+      <span class="msg" id="fxSaveMsg"></span>
     </div>
   </section>
 
@@ -504,18 +515,64 @@ var LS_KEY = "finance-pwa-state-v1";
 var baseBals = {};
 accounts.forEach(function(a){ baseBals[a.id] = a.bal; });
 var lastSyncAt = 0;        /* Last successful sync timestamp (ms) */
-var deletedKeys = [];      /* Tombstones for deleted records {key, deletedAt}, propagated via sync */
+var deletedKeys = [];      /* Tombstones {uid, deletedAt}; older builds wrote {key, deletedAt} — both are honoured */
 var settingsDirty = false; /* Flag for non-transaction changes (budgets/templates/merchants) pending sync */
 var zhMigrated = false;    /* One-time flag: English (pre-Chinese UI) saved names have been migrated to Chinese */
+var fxRates = {};          /* Manual FX to CAD: {USD:{rate:1.38, updatedAt:ms}} — synced with the data file */
+/* date|amount|note: now used ONLY to spot duplicates when importing CSV. It is no longer a record's
+   identity: two genuine records can share it (two CAD $2.50 coffees on the same day, no note). */
 function dedupeKey(t){ return t.date + "|" + t.amt + "|" + (t.note || ""); }
+
+/* ==================== Record identity (uid) ==================== */
+/* Every record carries a stable uid that survives edits and is unique across devices.
+   Sync, delete, edit and refund links all key on uid; the numeric id is kept only for older builds. */
+function newUid(){
+  try{ if(window.crypto && crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
+  return "u-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+}
+function fnv1a(s){
+  var h = 0x811c9dc5;
+  for(var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return ("0000000" + h.toString(16)).slice(-8);
+}
+/* Records saved before uids existed get a DETERMINISTIC legacy uid (dedupe key + occurrence number),
+   so every device and the cloud copy derive the same uid for the same record and the first sync after
+   upgrading does not duplicate anything. Refund links that pointed at the old numeric id are rewritten
+   to the uid, resolved within the same list (ids were only unique per device). Returns true if changed. */
+function normalizeTxns(list){
+  if(!list || !list.length) return false;
+  var changed = false, occ = {}, byId = {};
+  list.forEach(function(t){
+    if(!t.uid){
+      var k = dedupeKey(t), i = occ[k] || 0; occ[k] = i + 1;
+      t.uid = "L" + fnv1a(k) + fnv1a(k + "#" + i) + "-" + i; changed = true;
+    }
+    if(t.id != null) byId[String(t.id)] = t.uid;
+  });
+  list.forEach(function(t){
+    if(t.linkedTo != null && t.linkedTo !== "" && !t.linkedToUid){
+      t.linkedToUid = byId[String(t.linkedTo)] || null; changed = true;
+    }
+  });
+  return changed;
+}
+function txnByUid(uid){ for(var i = 0; i < txns.length; i++) if(txns[i].uid === uid) return txns[i]; return null; }
+function r2(n){ return Math.round((Number(n) || 0) * 100) / 100; }
+
 function saveLocal(){
   try{
     localStorage.setItem(LS_KEY, JSON.stringify({
       accounts:accounts, txns:txns, budgets:budgets, merchants:merchants,
       templates:templates, holdings:holdings, seq:seq, baseBals:baseBals,
-      lastSyncAt:lastSyncAt, deletedKeys:deletedKeys, zhMigrated:zhMigrated
+      lastSyncAt:lastSyncAt, deletedKeys:deletedKeys, zhMigrated:zhMigrated, fxRates:fxRates
     }));
-  }catch(e){ /* If storage is unavailable, fall back to memory only; do not block bookkeeping */ }
+    return true;
+  }catch(e){
+    /* Storage full or unavailable: keep working in memory, but say so instead of failing silently */
+    var m = document.getElementById("syncMsg");
+    if(m){ m.textContent = "本地保存失败（存储已满或被禁用）。请尽快导出数据文件或同步到 OneDrive。"; m.className = "msg err"; }
+    return false;
+  }
 }
 function loadLocal(){
   try{
@@ -534,10 +591,12 @@ function loadLocal(){
     lastSyncAt = s.lastSyncAt || 0;
     deletedKeys = s.deletedKeys || [];
     zhMigrated = !!s.zhMigrated;
+    fxRates = s.fxRates || {};
     return true;
   }catch(e){ return false; }
 }
 var hadLocalData = loadLocal(); /* True when this device already holds the user's data; the blank seed above is then fully replaced by it */
+if(normalizeTxns(txns)) saveLocal(); /* One-time upgrade: give pre-uid records their legacy uid */
 
 /* ==================== One-time migration: English saved names -> Chinese ==================== */
 /* The English UI version saved category / subcategory / merchant / template names in
@@ -667,7 +726,17 @@ if(!zhMigrated){
 
 /* ==================== Utilities ==================== */
 function $(id){return document.getElementById(id);}
-function fmt(n){return "CAD $" + Number(n).toLocaleString("en-CA",{minimumFractionDigits:2, maximumFractionDigits:2});}
+function fmt(n, ccy){return (ccy || "CAD") + " $" + Number(n).toLocaleString("en-CA",{minimumFractionDigits:2, maximumFractionDigits:2});}
+function acctCcy(id){ var a = acctById(id); return (a && a.ccy) || "CAD"; }
+/* Convert to CAD for totals (net worth, monthly stats, budgets). Uses the manual rate set on the
+   accounts page; with no rate set the amount is counted 1:1 and missingFx() makes the UI say so. */
+function fxRate(ccy){ if(!ccy || ccy === "CAD") return 1; var f = fxRates[ccy]; return (f && f.rate > 0) ? f.rate : null; }
+function toCAD(n, ccy){ var r = fxRate(ccy); return r2((Number(n) || 0) * (r || 1)); }
+function missingFx(){
+  var miss = {};
+  accounts.forEach(function(a){ if(!a.archived && a.ccy && a.ccy !== "CAD" && !fxRate(a.ccy) && a.bal) miss[a.ccy] = 1; });
+  return Object.keys(miss);
+}
 function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function catGroup(sub){
@@ -718,7 +787,7 @@ function fillCatSelect(sel, kind){
 }
 function fillAcctSelect(sel, includeVirtual){
   sel.innerHTML=accounts.filter(function(a){return !a.archived && (includeVirtual||!a.virtual);})
-    .map(function(a){return '<option value="'+a.id+'">'+esc(acctOrigName(a.name))+(a.virtual?"（虚拟）":"")+"</option>";}).join("");
+    .map(function(a){return '<option value="'+esc(a.id)+'">'+esc(acctOrigName(a.name))+(a.virtual?"（虚拟）":"")+"</option>";}).join("");
 }
 function refreshFormSelects(){
   fillCatSelect($("fCat"), curType==="income"?"income":"expense");
@@ -741,23 +810,25 @@ function monthStats(){
   var mk=monthKey(), inc=0, exp=0;
   txns.forEach(function(t){
     if(t.date.indexOf(mk)!==0) return;
-    if(t.type==="income") inc+=t.amt;
-    if(t.type==="expense") exp+=t.amt;
-    if(t.type==="refund") exp-=t.amt;
+    var v = toCAD(t.amt, acctCcy(t.acct));
+    if(t.type==="income") inc+=v;
+    if(t.type==="expense") exp+=v;
+    if(t.type==="refund") exp-=v;
   });
-  return {inc:inc, exp:exp};
+  return {inc:r2(inc), exp:r2(exp)};
 }
 function spentFor(b){
   var mk=monthKey(), s=0;
   txns.forEach(function(t){
     if(t.date.indexOf(mk)!==0) return;
-    var v = t.type==="expense"? t.amt : (t.type==="refund"? -t.amt : 0);
+    var c = toCAD(t.amt, acctCcy(t.acct));
+    var v = t.type==="expense"? c : (t.type==="refund"? -c : 0);
     if(!v) return;
     if(b.dim==="total") s+=v;
     if(b.dim==="category" && catGroup(t.cat)===zhGroup(b.target)) s+=v;
     if(b.dim==="nature" && t.nature===zhNatureTarget(b.target)) s+=v;
   });
-  return Math.max(0,s);
+  return Math.max(0,r2(s));
 }
 var nwShown = null, nwAnim = null;
 function animateNw(to){
@@ -774,15 +845,24 @@ function animateNw(to){
   nwAnim = requestAnimationFrame(step);
 }
 function renderSummary(){
-  var invest=holdings.reduce(function(s,h){return s+h.value;},0);
-  var real=accounts.filter(function(a){return !a.virtual && !a.archived;}).reduce(function(s,a){return s+a.bal;},0);
-  var avail=accounts.filter(function(a){return !a.virtual && !a.archived && a.kind.indexOf("投资")!==0;}).reduce(function(s,a){return s+a.bal;},0);
-  var reserved=accounts.filter(function(a){return a.virtual;}).reduce(function(s,a){return s+a.bal;},0);
-  var nw=real; /* Net worth excludes virtual reserves */
+  function isInvest(a){ return String(EN_ZH_KIND[a.kind]||a.kind||"").indexOf("投资")===0; }
+  function sumCAD(list){ return r2(list.reduce(function(s,a){return s+toCAD(a.bal, a.ccy);},0)); }
+  var live=accounts.filter(function(a){return !a.virtual && !a.archived;});
+  var avail=sumCAD(live.filter(function(a){return !isInvest(a);}));
+  var reserved=sumCAD(accounts.filter(function(a){return a.virtual && !a.archived;}));
+  /* Investments: the holdings table when it has entries (market value), otherwise the investment
+     accounts' balances — never both, so nothing is double-counted. */
+  var invest=holdings.length
+    ? r2(holdings.reduce(function(s,h){return s+(Number(h.value)||0);},0))
+    : sumCAD(live.filter(isInvest));
+  var nw=r2(avail+invest); /* Net worth = cash/bank/cards + investments; virtual reserves excluded */
   animateNw(nw);
+  var miss=missingFx();
+  $("fxMsg").textContent = miss.length ? ("未设置 "+miss.join(" / ")+" 兑 CAD 汇率，净资产暂按 1:1 计入。去「账户」页设置。") : "";
   $("stAvail").textContent=fmt(avail);
   $("stReserved").textContent=fmt(reserved);
   $("stInvest").textContent=fmt(invest);
+  $("stAvail").title=$("stReserved").title=$("nwValue").title="外币账户按设置的汇率折算为 CAD";
   var ms=monthStats();
   $("stMonth").textContent=((ms.inc-ms.exp)>=0?"+ ":"− ")+fmt(Math.abs(ms.inc-ms.exp));
   $("stMonthNote").textContent="本月：收入 "+fmt(ms.inc)+" − 支出 "+fmt(ms.exp);
@@ -813,19 +893,33 @@ function txnHTML(t){
   else if(t.type==="transfer"){sign="";cls="";typeName="转账";}
   else {sign="−";cls="neg";typeName="支出";}
   var title, meta;
+  var U=esc(t.uid);
   if(t.type==="transfer"){
     title=acctName(t.fromAcct)+" → "+acctName(t.toAcct);
-    meta=t.date+" · 转账"+(t.amtIn&&t.amtIn!==t.amt?" · 跨币种":"")+(t.note?" · "+esc(t.note):"");
-    var amtTxt=fmt(t.amt)+(t.amtIn&&t.amtIn!==t.amt?" → "+fmt(t.amtIn):"");
-    return '<div class="txn-wrap"><div class="txn-actions"><button class="act-del" data-del="'+t.id+'">删除</button></div><div class="txn" data-swipe="1"><div class="grow"><b>'+esc(title)+'</b><div class="meta">'+meta+'</div></div><div class="amt">'+amtTxt+'</div><button class="del" data-del="'+t.id+'">删除</button></div></div>';
+    var fc=acctCcy(t.fromAcct), tc=acctCcy(t.toAcct), cross=(t.amtIn&&t.amtIn!==t.amt)||fc!==tc;
+    meta=t.date+" · 转账"+(cross?" · 跨币种":"")+(t.note?" · "+esc(t.note):"");
+    var amtTxt=fmt(t.amt,fc)+(cross?" → "+fmt(t.amtIn||t.amt,tc):"");
+    return '<div class="txn-wrap"><div class="txn-actions"><button class="act-del" data-del="'+U+'">删除</button></div><div class="txn" data-swipe="1"><div class="grow"><b>'+esc(title)+'</b><div class="meta">'+meta+'</div></div><div class="amt">'+amtTxt+'</div><button class="del" data-del="'+U+'">删除</button></div></div>';
   }
   title=(t.merchant?esc(zhMerchant(t.merchant))+" · ":"")+esc(zhSub(t.cat));
-  meta=t.date+" · "+typeName+" · "+esc(acctName(t.acct))+(t.note?" · "+esc(t.note):"")+(t.linkedTo?" · 已关联原支出":"");
-  return '<div class="txn-wrap"><div class="txn-actions"><button class="act-edit" data-edit="'+t.id+'">编辑</button><button class="act-del" data-del="'+t.id+'">删除</button></div><div class="txn" data-swipe="2"><div class="grow"><b>'+title+'</b> <span class="tag '+t.nature+'">'+NATURE_NAME[t.nature]+'</span><div class="meta">'+meta+'</div></div><div class="amt '+cls+'">'+sign+" "+fmt(t.amt)+'</div><button class="del" data-del="'+t.id+'">删除</button></div></div>';
+  meta=t.date+" · "+typeName+" · "+esc(acctName(t.acct))+(t.note?" · "+esc(t.note):"")+((t.linkedToUid||t.linkedTo)?" · 已关联原支出":"");
+  var nat=NATURE_NAME[t.nature]?t.nature:"flex";
+  return '<div class="txn-wrap"><div class="txn-actions"><button class="act-edit" data-edit="'+U+'">编辑</button><button class="act-del" data-del="'+U+'">删除</button></div><div class="txn" data-swipe="2"><div class="grow"><b>'+title+'</b> <span class="tag '+nat+'">'+NATURE_NAME[nat]+'</span><div class="meta">'+meta+'</div></div><div class="amt '+cls+'">'+sign+" "+fmt(t.amt,acctCcy(t.acct))+'</div><button class="del" data-del="'+U+'">删除</button></div></div>';
+}
+/* Newest first: by date, then by last edit, so same-day records keep a stable order */
+function byNewest(a,b){ if(a.date!==b.date) return a.date<b.date?1:-1; return (b.updatedAt||0)-(a.updatedAt||0); }
+function deleteTxn(uid){
+  var t=txnByUid(uid);
+  if(!t) return;
+  if(!window.confirm("删除这条记录？"+t.date+" · "+fmt(t.amt, acctCcy(t.acct||t.fromAcct)))) return;
+  applyBalance(t,-1);
+  deletedKeys.push({uid:uid, deletedAt:Date.now()}); /* Tombstone by uid: deletes exactly this record, never a same-day twin */
+  txns=txns.filter(function(x){return x.uid!==uid;});
+  renderAll();
 }
 function renderTxns(){
   var q=$("qSearch").value.trim().toLowerCase(), qc=$("qCat").value, qt=$("qType").value;
-  var list=txns.slice().sort(function(a,b){return b.date<a.date?-1:1;}).filter(function(t){
+  var list=txns.slice().sort(byNewest).filter(function(t){
     if(qt && t.type!==qt) return false;
     if(qc && t.type!=="transfer" && catGroup(t.cat)!==qc) return false;
     if(q && JSON.stringify(t).toLowerCase().indexOf(q)<0) return false;
@@ -833,18 +927,12 @@ function renderTxns(){
   });
   var html=list.length? list.map(txnHTML).join("") : '<div class="empty">暂无记录</div>';
   $("txnList").innerHTML=html;
-  $("homeRecent").innerHTML=txns.length? txns.slice().sort(function(a,b){return b.date<a.date?-1:1;}).slice(0,5).map(txnHTML).join("") : '<div class="empty">暂无记录</div>';
+  $("homeRecent").innerHTML=txns.length? txns.slice().sort(byNewest).slice(0,5).map(txnHTML).join("") : '<div class="empty">暂无记录</div>';
   document.querySelectorAll("[data-del]").forEach(function(btn){
-    btn.addEventListener("click",function(){
-      var id=Number(btn.getAttribute("data-del"));
-      var t=txns.filter(function(x){return x.id===id;})[0];
-      if(t){ applyBalance(t,-1); deletedKeys.push({key:dedupeKey(t), deletedAt:Date.now()}); }
-      txns=txns.filter(function(x){return x.id!==id;});
-      renderAll();
-    });
+    btn.addEventListener("click",function(){ deleteTxn(btn.getAttribute("data-del")); });
   });
   document.querySelectorAll("[data-edit]").forEach(function(btn){
-    btn.addEventListener("click",function(){ startEdit(Number(btn.getAttribute("data-edit"))); });
+    btn.addEventListener("click",function(){ startEdit(btn.getAttribute("data-edit")); });
   });
   document.querySelectorAll(".txn[data-swipe]").forEach(function(el){
     var sx = 0, dx = 0, tracking = false;
@@ -865,17 +953,18 @@ function renderTxns(){
   });
 }
 function applyBalance(t, dir){
-  if(t.type==="expense"){var a=acctById(t.acct); if(a)a.bal-=t.amt*dir;}
-  if(t.type==="income"){var a2=acctById(t.acct); if(a2)a2.bal+=t.amt*dir;}
-  if(t.type==="refund"){var a3=acctById(t.acct); if(a3)a3.bal+=t.amt*dir;}
+  /* Round to cents after every step so float error never accumulates in balances */
+  if(t.type==="expense"){var a=acctById(t.acct); if(a)a.bal=r2(a.bal-t.amt*dir);}
+  if(t.type==="income"){var a2=acctById(t.acct); if(a2)a2.bal=r2(a2.bal+t.amt*dir);}
+  if(t.type==="refund"){var a3=acctById(t.acct); if(a3)a3.bal=r2(a3.bal+t.amt*dir);}
   if(t.type==="transfer"){
     var f=acctById(t.fromAcct), to=acctById(t.toAcct);
-    if(f)f.bal-=t.amt*dir; if(to)to.bal+=(t.amtIn||t.amt)*dir;
+    if(f)f.bal=r2(f.bal-t.amt*dir); if(to)to.bal=r2(to.bal+(t.amtIn||t.amt)*dir);
   }
 }
 function renderAccounts(){
   function row(a){
-    return '<div class="acct"><div><b>'+esc(acctOrigName(a.name))+'</b> '+(a.virtual?'<span class="pill amber">虚拟 · 不计可用</span>':"")+'<div class="meta" style="font-size:12.5px;color:var(--muted)">'+esc(EN_ZH_KIND[a.kind]||a.kind)+" · "+a.ccy+'</div></div><div class="bal">'+fmt(a.bal)+'</div></div>';
+    return '<div class="acct"><div><b>'+esc(acctOrigName(a.name))+'</b> '+(a.virtual?'<span class="pill amber">虚拟 · 不计可用</span>':"")+'<div class="meta" style="font-size:12.5px;color:var(--muted)">'+esc(EN_ZH_KIND[a.kind]||a.kind)+" · "+a.ccy+'</div></div><div class="bal">'+fmt(a.bal,a.ccy)+(a.ccy&&a.ccy!=="CAD"&&fxRate(a.ccy)?'<div class="meta" style="font-size:12px;color:var(--muted)">≈ '+fmt(toCAD(a.bal,a.ccy))+'</div>':"")+'</div></div>';
   }
   $("acctList").innerHTML=accounts.filter(function(a){return !a.archived && !a.virtual;}).map(row).join("");
   $("virtualList").innerHTML=accounts.filter(function(a){return a.virtual;}).map(row).join("");
@@ -924,15 +1013,17 @@ function renderAll(){ renderSummary(); renderBudgets(); renderTxns(); renderAcco
 
 /* ==================== Entry Form ==================== */
 var curType="expense";
-var editingId = null;
-function startEdit(id){
-  var t = txns.filter(function(x){ return x.id === id; })[0];
+var editingUid = null;
+function startEdit(uid){
+  var t = txnByUid(uid);
   if(!t || t.type === "transfer") return;
-  editingId = id;
+  editingUid = uid;
   setType(t.type);
   $("fDate").value = t.date; $("fAmt").value = t.amt; $("fCat").value = zhSub(t.cat);
   $("fNature").value = t.nature; $("fAcct").value = t.acct;
   setMerchantValue(t.merchant || ""); $("fNote").value = t.note || "";
+  if(t.type === "refund") $("fRefundPick").value = t.linkedToUid || "";
+  updateAmtLabel();
   $("btnAdd").textContent = "保存修改";
   $("addMsg").textContent = "正在编辑一笔" + (t.type === "income" ? "收入" : t.type === "refund" ? "退款" : "支出") + "，改完点保存修改。"; $("addMsg").className = "msg";
   gotoTab("book");
@@ -943,13 +1034,15 @@ function setType(type){
   $("formSimple").style.display = type==="transfer" ? "none":"block";
   $("formTransfer").style.display = type==="transfer" ? "block":"none";
   $("refundLink").style.display = type==="refund" ? "block":"none";
-  $("formTitle").textContent = type==="transfer" ? "记转账" : (type==="refund" ? "记退款" : (editingId ? "编辑记录" : "记一笔"));
+  $("formTitle").textContent = type==="transfer" ? "记转账" : (type==="refund" ? "记退款" : (editingUid ? "编辑记录" : "记一笔"));
   fillCatSelect($("fCat"), type==="income"?"income":"expense");
   if(type==="refund") refreshRefundPick("");
 }
 document.querySelectorAll("#typeSeg button").forEach(function(b){ b.addEventListener("click",function(){ setType(b.getAttribute("data-type")); }); });
 
 $("fCat").addEventListener("change",function(){ $("fNature").value=catNature($("fCat").value); });
+function updateAmtLabel(){ $("fAmtLabel").textContent="金额（"+acctCcy($("fAcct").value)+"）"; }
+$("fAcct").addEventListener("change",updateAmtLabel);
 /* 商户下拉：选项来自常用商户列表，选中按默认分类自动填分类；选「自定义…」可手输新商户 */
 var MERCHANT_CUSTOM="__custom__";
 function fillMerchantSelect(){
@@ -990,7 +1083,7 @@ function refreshRefundPick(keyword){
   txns.filter(function(t){return t.type==="expense";}).forEach(function(t){
     var hay=(t.merchant+" "+t.note+" "+t.cat+" "+t.amt).toLowerCase();
     if(kw && hay.indexOf(kw)<0) return;
-    opts+='<option value="'+t.id+'">'+t.date+" · "+esc(zhSub(t.cat))+" · "+fmt(t.amt)+(t.merchant?" · "+esc(zhMerchant(t.merchant)):"")+(t.note?" · "+esc(t.note):"")+"</option>";
+    opts+='<option value="'+esc(t.uid)+'">'+t.date+" · "+esc(zhSub(t.cat))+" · "+fmt(t.amt,acctCcy(t.acct))+(t.merchant?" · "+esc(zhMerchant(t.merchant)):"")+(t.note?" · "+esc(t.note):"")+"</option>";
   });
   $("fRefundPick").innerHTML=opts;
 }
@@ -1007,6 +1100,7 @@ function applyTemplate(t){
     if(t.cat) $("fCat").value=zhSub(t.cat);
     $("fNature").value=catNature(t.cat||"其他支出");
     if(t.acct) $("fAcct").value=t.acct;
+    updateAmtLabel();
     setMerchantValue(t.merchant?zhMerchant(t.merchant):"");
     $("fNote").value=t.note||"";
     if(t.amt) $("fAmt").value=t.amt;
@@ -1017,28 +1111,28 @@ $("btnAdd").addEventListener("click",function(){
   var amt=parseFloat($("fAmt").value);
   var msg=$("addMsg");
   if(!amt || amt<=0){ msg.textContent="先填金额。"; msg.className="msg err"; return; }
-  if(editingId){
-    var old=txns.filter(function(x){return x.id===editingId;})[0];
+  if(editingUid){
+    var old=txnByUid(editingUid); /* Same uid after the edit, so sync updates this record instead of duplicating it */
     if(old){
       applyBalance(old,-1);
-      old.type=curType; old.date=$("fDate").value||todayStr(); old.amt=Math.round(amt*100)/100;
+      old.type=curType; old.date=$("fDate").value||todayStr(); old.amt=r2(amt);
       old.cat=$("fCat").value; old.nature=$("fNature").value; old.acct=$("fAcct").value;
       old.merchant=getMerchantValue(); old.note=$("fNote").value.trim();
-      old.linkedTo= curType==="refund" ? ($("fRefundPick").value||null) : null; old.updatedAt=Date.now();
+      old.linkedToUid= curType==="refund" ? ($("fRefundPick").value||null) : null; old.linkedTo=null; old.updatedAt=Date.now();
       applyBalance(old,1);
-      msg.textContent="已更新："+fmt(old.amt)+"（"+old.cat+"）"; msg.className="msg ok";
+      msg.textContent="已更新："+fmt(old.amt,acctCcy(old.acct))+"（"+old.cat+"）"; msg.className="msg ok";
     }
-    editingId=null; $("btnAdd").textContent="保存";
+    editingUid=null; $("btnAdd").textContent="保存";
     $("fAmt").value=""; $("fNote").value="";
     renderAll();
     return;
   }
-  var t={ id:seq++, type:curType, date:$("fDate").value||todayStr(), amt:Math.round(amt*100)/100,
+  var t={ id:seq++, uid:newUid(), type:curType, date:$("fDate").value||todayStr(), amt:r2(amt),
     cat:$("fCat").value, nature:$("fNature").value, acct:$("fAcct").value,
     merchant:getMerchantValue(), note:$("fNote").value.trim(),
-    linkedTo: curType==="refund" ? ($("fRefundPick").value||null) : null, updatedAt:Date.now() };
+    linkedToUid: curType==="refund" ? ($("fRefundPick").value||null) : null, updatedAt:Date.now() };
   txns.push(t); applyBalance(t,1);
-  msg.textContent=(editingId?"已更新：":"已保存：")+(t.type==="income"?"收入":t.type==="refund"?"退款":"支出")+" "+fmt(t.amt)+"（"+t.cat+"）"; msg.className="msg ok";
+  msg.textContent="已保存："+(t.type==="income"?"收入":t.type==="refund"?"退款":"支出")+" "+fmt(t.amt,acctCcy(t.acct))+"（"+t.cat+"）"; msg.className="msg ok";
   $("fAmt").value=""; $("fNote").value="";
   renderAll();
 });
@@ -1065,10 +1159,10 @@ $("btnTransfer").addEventListener("click",function(){
   if(!out||out<=0){ msg.textContent="先填转出金额。"; msg.className="msg err"; return; }
   if($("tFrom").value===$("tTo").value){ msg.textContent="转出和转入不能是同一账户。"; msg.className="msg err"; return; }
   var inn=parseFloat($("tAmtIn").value)||out;
-  var t={id:seq++, type:"transfer", date:$("tDate").value||todayStr(), amt:Math.round(out*100)/100, amtIn:Math.round(inn*100)/100,
+  var t={id:seq++, uid:newUid(), type:"transfer", date:$("tDate").value||todayStr(), amt:Math.round(out*100)/100, amtIn:Math.round(inn*100)/100,
     fromAcct:$("tFrom").value, toAcct:$("tTo").value, note:$("tNote").value.trim(), cat:"Transfer", nature:"flex", merchant:"", updatedAt:Date.now()};
   txns.push(t); applyBalance(t,1);
-  msg.textContent="已保存转账："+acctName(t.fromAcct)+" → "+acctName(t.toAcct)+" "+fmt(t.amt)+(inn!==out?" → "+fmt(inn):""); msg.className="msg ok";
+  msg.textContent="已保存转账："+acctName(t.fromAcct)+" → "+acctName(t.toAcct)+" "+fmt(t.amt,acctCcy(t.fromAcct))+(t.amtIn!==t.amt||acctCcy(t.fromAcct)!==acctCcy(t.toAcct)?" → "+fmt(t.amtIn,acctCcy(t.toAcct)):""); msg.className="msg ok";
   $("tAmtOut").value=""; $("tAmtIn").value="";
   renderAll();
 });
@@ -1090,6 +1184,17 @@ $("nmAdd").addEventListener("click",function(){
   merchants.push({name:name, cat:$("nmCat").value});
   $("nmName").value=""; $("nmMsg").textContent="已添加商户："+name; $("nmMsg").className="msg ok";
   settingsDirty=true; refreshFormSelects(); renderMerchants(); saveLocal(); updateSyncUI(); scheduleAutoSync();
+});
+
+/* ==================== 汇率设置 ==================== */
+function showFxInput(){ var f=fxRates[$("fxCcy").value]; $("fxRateIn").value = f ? f.rate : ""; $("fxSaveMsg").textContent = f ? ("更新于 "+new Date(f.updatedAt).toLocaleDateString("en-CA")) : "未设置"; $("fxSaveMsg").className="msg"; }
+$("fxCcy").addEventListener("change", showFxInput);
+$("fxSave").addEventListener("click", function(){
+  var c=$("fxCcy").value, r=parseFloat($("fxRateIn").value);
+  if(!(r>0)){ $("fxSaveMsg").textContent="先填汇率。"; $("fxSaveMsg").className="msg err"; return; }
+  fxRates[c]={rate:Math.round(r*10000)/10000, updatedAt:Date.now()};
+  $("fxSaveMsg").textContent="已保存：1 "+c+" = "+fxRates[c].rate+" CAD"; $("fxSaveMsg").className="msg ok";
+  settingsDirty=true; renderAll();
 });
 
 /* ==================== 添加预算 ==================== */
@@ -1197,7 +1302,7 @@ function handleCSV(text){
     counts[isIncome?"income":"expense"]++;
     var acctId="rogers";
     var acctStr=cAcct>=0?(row[cAcct]||""):""; var ACCT_KW=[["td-cheq","TD Chequing"],["td-cheq","TD支票"],["td-cb","Cash Back"],["td-cb","返现"],["cibc","CIBC"],["cibc","Costco"],["rogers","Rogers"],["cash-usd","USD"],["cash-usd","美元"],["cash-cad","现金"],["cash-cad","Cash CAD"],["tfsa","TFSA"],["fhsa","FHSA"],["rent","房租预留"],["scotia-c","Scotia"],["scotia-s","Scotia Savings"],["icbc-c","ICBC Chequing"],["icbc-s","ICBC Savings"]]; ACCT_KW.forEach(function(k){ if(acctStr.indexOf(k[1])>=0) acctId=k[0]; });
-    items.push({id:seq++, type:isIncome?"income":"expense", date:date, amt:amt, cat:sub, nature:catNature(sub), acct:acctId, merchant:"", note:note, linkedTo:null, updatedAt:Date.now()});
+    items.push({id:seq++, uid:newUid(), type:isIncome?"income":"expense", date:date, amt:amt, cat:sub, nature:catNature(sub), acct:acctId, merchant:"", note:note, linkedTo:null, updatedAt:Date.now()});
   }
   pendingImport={items:items};
   box.innerHTML="<p>预览：可导入 <b>"+(counts.income+counts.expense)+"</b> 条（收入 "+counts.income+" · 支出 "+counts.expense+"）· 重复跳过 "+dup+" · 转账跳过 "+counts.transfer+" · 余额/负债变更跳过 "+counts.skip+" · 无法解析 "+counts.bad+"。</p>"+
@@ -1208,10 +1313,10 @@ function doImport(){
   var box=$("importPreview");
   if(!pendingImport) return;
   if(pendingImport.json){
-    var data=pendingImport.json, added=0;
-    var seen={}; txns.forEach(function(t){ seen[t.date+"|"+t.amt+"|"+(t.note||"")]=true; });
-    data.txns.forEach(function(t){ zhTxnFields(t); var k=t.date+"|"+t.amt+"|"+(t.note||""); if(!seen[k]){ t.id=seq++; txns.push(t); applyBalance(t,1); added++; } });
-    box.innerHTML="<p>已从数据文件合并 "+added+" 条新记录。</p>";
+    /* Same merge as cloud sync: by uid, newer edit wins, deletions respected, missing accounts added.
+       Re-importing an old backup never overwrites newer local edits or resurrects deleted records. */
+    var res=mergeRemote(pendingImport.json);
+    box.innerHTML="<p>已从数据文件合并 "+res.added+" 条新记录"+(res.adopted?"，并载入账户、持仓、预算与模板":"")+"。</p>";
   } else {
     pendingImport.items.forEach(function(t){ txns.push(t); applyBalance(t,1); });
     box.innerHTML="<p>已导入 "+pendingImport.items.length+" 条记录，账户余额已更新。</p>";
@@ -1221,7 +1326,7 @@ function doImport(){
   renderAll();
 }
 $("btnExport").addEventListener("click",function(){
-  var data={version:2, exportedAt:new Date().toISOString(), accounts:accounts, txns:txns, budgets:budgets, merchants:merchants, templates:templates, holdings:holdings, deletedKeys:deletedKeys, baseBals:baseBals};
+  var data=buildDataFile();
   var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   var a=document.createElement("a");
   a.href=URL.createObjectURL(blob); a.download="finance-data.json"; a.click();
@@ -1232,7 +1337,12 @@ $("btnExport").addEventListener("click",function(){
 /* ==================== OneDrive 直连同步 (MSAL + Graph) ==================== */
 var OD_CLIENT_ID = "cff5bc5e-6954-419f-924a-e7bcf81fc853";
 var OD_SCOPES = ["Files.ReadWrite", "offline_access"];
-var OD_FILE_PATH = "/me/drive/root:/Finance/finance-data.json:/content";
+var OD_ITEM_PATH = "/me/drive/root:/Finance/finance-data.json";
+var OD_FILE_PATH = OD_ITEM_PATH + ":/content";
+function buildDataFile(){
+  return { version:3, exportedAt:new Date().toISOString(), accounts:accounts, txns:txns, budgets:budgets,
+    merchants:merchants, templates:templates, holdings:holdings, deletedKeys:deletedKeys, baseBals:baseBals, fxRates:fxRates };
+}
 var msalApp = null, odAccount = null, syncing = false, syncTimer = null;
 
 function setSyncMsg(text, ok){
@@ -1331,19 +1441,31 @@ function ensureFinanceFolder(){
     return resp.text().then(function(t){ throw new Error("创建 Finance 文件夹失败：" + resp.status + " " + t.slice(0,120)); });
   });
 }
+/* Pull returns the file plus its eTag. The eTag is read BEFORE the content, so if the file changes in
+   between, the later If-Match push fails safely (412) and the sync simply runs again. */
 function pullRemote(){
-  return graphFetch(OD_FILE_PATH, { method: "GET" }).then(function(resp){
-    if(resp.status === 404) return null;
-    if(!resp.ok) return resp.text().then(function(t){ throw new Error("拉取失败：" + resp.status + " " + t.slice(0,120)); });
-    return resp.json();
+  return graphFetch(OD_ITEM_PATH, { method: "GET" }).then(function(meta){
+    if(meta.status === 404) return { data:null, eTag:null };
+    if(!meta.ok) return meta.text().then(function(t){ throw new Error("读取文件信息失败：" + meta.status + " " + t.slice(0,120)); });
+    return meta.json().then(function(m){
+      return graphFetch(OD_FILE_PATH, { method: "GET" }).then(function(resp){
+        if(resp.status === 404) return { data:null, eTag:null };
+        if(!resp.ok) return resp.text().then(function(t){ throw new Error("拉取失败：" + resp.status + " " + t.slice(0,120)); });
+        return resp.json().then(function(d){ return { data:d, eTag:m.eTag || null }; });
+      });
+    });
   });
 }
-function pushRemote(){
-  var data = { version:2, exportedAt:new Date().toISOString(), accounts:accounts, txns:txns, budgets:budgets,
-    merchants:merchants, templates:templates, holdings:holdings, deletedKeys:deletedKeys, baseBals:baseBals };
+/* Push only if the cloud file is still the version we merged (If-Match). Another device that pushed
+   in the meantime makes this return 412 instead of being silently overwritten. */
+function pushRemote(eTag){
+  var data = buildDataFile();
   return ensureFinanceFolder().then(function(){
-    return graphFetch(OD_FILE_PATH, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
+    var h = {"Content-Type":"application/json"};
+    if(eTag) h["If-Match"] = eTag;
+    return graphFetch(OD_FILE_PATH, { method:"PUT", headers:h, body: JSON.stringify(data) });
   }).then(function(resp){
+    if(resp.status === 412){ var c = new Error("cloud_changed"); c.conflict = true; throw c; }
     if(!resp.ok) return resp.text().then(function(t){ throw new Error("推送失败：" + resp.status + " " + t.slice(0,120)); });
   });
 }
@@ -1374,27 +1496,46 @@ function remoteHasRealData(remote){
 }
 function mergeRemote(remote){
   if(!remote) return { added:0, adopted:false };
-  var localMap = {}, merged = [], added = 0;
-  txns.forEach(function(t){ localMap[dedupeKey(t)] = t; });
-  var remoteMap = {};
-  (remote.txns || []).forEach(function(t){ remoteMap[dedupeKey(t)] = t; });
-  var allKeys = {};
-  Object.keys(localMap).forEach(function(k){ allKeys[k] = 1; });
-  Object.keys(remoteMap).forEach(function(k){ allKeys[k] = 1; });
-  /* Merge tombstones: deletions from both sides count */
-  var tomb = {};
-  deletedKeys.forEach(function(d){ tomb[d.key] = Math.max(tomb[d.key] || 0, d.deletedAt); });
-  (remote.deletedKeys || []).forEach(function(d){ tomb[d.key] = Math.max(tomb[d.key] || 0, d.deletedAt); });
-  Object.keys(allKeys).forEach(function(k){
-    var l = localMap[k], r = remoteMap[k], pick;
-    if(l && r) pick = ((r.updatedAt || 0) > (l.updatedAt || 0)) ? r : l;
-    else pick = l || r;
-    if(!l && r) added++;
-    if(tomb[k] && tomb[k] >= (pick.updatedAt || 0)) return; /* Already deleted and the deletion is newer */
+  /* Records are matched by uid (stable across edits, unique across devices), never by date|amount|note:
+     same-day twins both survive, and an edited record updates in place instead of reappearing. */
+  normalizeTxns(txns);
+  var rtx = (remote.txns || []).map(function(t){ return Object.assign({}, t); });
+  normalizeTxns(rtx);
+  rtx.forEach(zhTxnFields);
+  function newer(a, b){ return (a.updatedAt || 0) >= (b.updatedAt || 0) ? a : b; }
+  var localMap = {}, remoteMap = {}, order = [], seenUid = {};
+  txns.forEach(function(t){ localMap[t.uid] = localMap[t.uid] ? newer(localMap[t.uid], t) : t; if(!seenUid[t.uid]){ seenUid[t.uid] = 1; order.push(t.uid); } });
+  rtx.forEach(function(t){ remoteMap[t.uid] = remoteMap[t.uid] ? newer(remoteMap[t.uid], t) : t; if(!seenUid[t.uid]){ seenUid[t.uid] = 1; order.push(t.uid); } });
+  /* Tombstones from both sides. New ones are by uid; legacy ones (older builds) are by date|amount|note
+     and still remove copies of that record not edited after the deletion. */
+  var tombU = {}, tombK = {};
+  function addTomb(d){
+    if(!d) return;
+    if(d.uid) tombU[d.uid] = Math.max(tombU[d.uid] || 0, d.deletedAt || 0);
+    else if(d.key) tombK[d.key] = Math.max(tombK[d.key] || 0, d.deletedAt || 0);
+  }
+  deletedKeys.forEach(addTomb);
+  (remote.deletedKeys || []).forEach(addTomb);
+  var merged = [], added = 0;
+  order.forEach(function(u){
+    var l = localMap[u], r = remoteMap[u];
+    var pick = (l && r) ? newer(r, l) : (l || r);
+    if(l && r && pick === r && (r.updatedAt || 0) === (l.updatedAt || 0)) pick = l; /* tie: keep local object */
+    var at = pick.updatedAt || 0;
+    if((tombU[u] && tombU[u] >= at) || (tombK[dedupeKey(pick)] && tombK[dedupeKey(pick)] >= at)) return; /* deleted after its last edit */
+    if(!l) added++;
     merged.push(pick);
   });
   txns = merged;
-  deletedKeys = Object.keys(tomb).map(function(k){ return { key:k, deletedAt:tomb[k] }; });
+  deletedKeys = Object.keys(tombU).map(function(k){ return { uid:k, deletedAt:tombU[k] }; })
+    .concat(Object.keys(tombK).map(function(k){ return { key:k, deletedAt:tombK[k] }; }));
+  /* FX rates: per currency, the newer setting wins */
+  if(remote.fxRates){
+    Object.keys(remote.fxRates).forEach(function(c){
+      var rf = remote.fxRates[c], lf = fxRates[c];
+      if(rf && rf.rate > 0 && (!lf || (rf.updatedAt || 0) > (lf.updatedAt || 0))) fxRates[c] = rf;
+    });
+  }
   /* Accounts use local as source of truth (balances recomputed from transactions); add any new accounts from the cloud */
   if(remote.accounts){
     remote.accounts.forEach(function(ra){
@@ -1404,11 +1545,7 @@ function mergeRemote(remote){
   /* Adopt the cloud copy wholesale — accounts, opening balances, budgets, templates,
      merchants and holdings — whenever this device holds none of the user's data:
      either a true fresh install (no local state at all) or local state that is still
-     the untouched blank seed. The seed case is the home-screen PWA: its first launch
-     persists the blank seed to its own localStorage and the login redirect reloads
-     the page, so hadLocalData alone reads true there and the adoption never ran —
-     the seed's zero balances and empty holdings were treated as the source of truth
-     and the real cloud data never showed. Adoption requires the cloud to actually
+     the untouched blank seed (see isBlankSeedState). Adoption requires the cloud to actually
      hold real data, and syncNow() refuses to push while local is still blank and
      the cloud has data, so the blank seed can never overwrite the good cloud copy. */
   var adopted = false;
@@ -1420,15 +1557,13 @@ function mergeRemote(remote){
     if(remote.templates) templates = remote.templates;
     if(remote.holdings) holdings = remote.holdings;
     /* Reconcile opening balances so the recomputed balances match the balances
-       stored in the cloud file exactly, even if the cloud baseBals are stale:
-       measure each account's transaction-only effect, then set its opening
-       balance to (cloud balance − that effect). No-op when baseBals are current. */
+       stored in the cloud file exactly, even if the cloud baseBals are stale. */
     var remoteBal = {};
     (remote.accounts || []).forEach(function(ra){ remoteBal[ra.id] = ra.bal || 0; });
     var adoptedBase = baseBals; baseBals = {};
     recomputeBalances(); /* Accounts now hold transaction-only effects */
     accounts.forEach(function(a){
-      baseBals[a.id] = (remoteBal[a.id] != null) ? Math.round((remoteBal[a.id] - a.bal) * 100) / 100 : (adoptedBase[a.id] || 0);
+      baseBals[a.id] = (remoteBal[a.id] != null) ? r2(remoteBal[a.id] - a.bal) : (adoptedBase[a.id] || 0);
     });
     hadLocalData = true;
     adopted = true;
@@ -1449,25 +1584,45 @@ function syncNow(auto){
   if(!odAccount){ if(!auto) setSyncMsg("尚未连接 OneDrive。去「安装 / 连接」点连接 OneDrive。", false); return; }
   if(!navigator.onLine){ if(!auto) setSyncMsg("当前离线。新记录存本地计入待同步，联网后自动推送。", false); return; }
   syncing = true; setSyncMsg("同步中…");
-  pullRemote().then(function(remote){
-    var res = mergeRemote(remote);
-    /* Safety net: if local is still the blank seed while the cloud holds real
-       data, the merge did not adopt — never push the blank seed over the good
-       cloud copy, and never report this state as "已是最新". */
-    if(remoteHasRealData(remote) && isBlankSeedState()){
-      var blocked = new Error("blank_local_cloud_has_data");
-      blocked.blockedPush = true;
-      throw blocked;
-    }
-    return pushRemote().then(function(){ return res; });
-  }).then(function(res){
+  var totalAdded = 0, adoptedAny = false;
+  /* pull → merge → push(If-Match). If another device pushed in between (412), start over with
+     its new file. The third round pushes without If-Match (the v1 behaviour, right after a fresh
+     merge) so a sync can never get stuck if OneDrive keeps rejecting the condition. */
+  function round(n){
+    return pullRemote().then(function(p){
+      var remote = p.data;
+      var res = mergeRemote(remote);
+      totalAdded += res.added; adoptedAny = adoptedAny || res.adopted;
+      /* Safety net: if local is still the blank seed while the cloud holds real
+         data, the merge did not adopt — never push the blank seed over the good
+         cloud copy, and never report this state as "已是最新". */
+      if(remoteHasRealData(remote) && isBlankSeedState()){
+        var blocked = new Error("blank_local_cloud_has_data");
+        blocked.blockedPush = true;
+        throw blocked;
+      }
+      saveLocal();
+      return pushRemote(n < 3 ? p.eTag : null);
+    }).catch(function(err){
+      if(err && err.conflict && n < 3) return round(n + 1);
+      throw err;
+    });
+  }
+  round(1).then(function(){
     lastSyncAt = Date.now(); settingsDirty = false;
     renderAll(); /* Re-render everything so adopted cloud values show immediately */
-    setSyncMsg(res.adopted ? "同步完成：已从云端载入账户余额、持仓、预算与模板。" :
-      ("同步完成" + (res.added ? "：从云端合并 " + res.added + " 条新记录。" : "：已是最新。")), true);
+    setSyncMsg(adoptedAny ? "同步完成：已从云端载入账户余额、持仓、预算与模板。" :
+      ("同步完成" + (totalAdded ? "：从云端合并 " + totalAdded + " 条新记录。" : "：已是最新。")), true);
   }).catch(function(err){
+    /* Show whatever was merged before the failure (already saved locally); plain renders only,
+       renderAll() would schedule another auto-sync and loop on a persistent error */
+    renderSummary(); renderBudgets(); renderTxns(); renderAccounts(); renderInvest(); renderMerchants(); renderTemplates();
     if(err && err.blockedPush){
       setSyncMsg("同步未完成：云端有你的数据，但本地仍是空白模板，已停止推送以保护云端数据。点立即同步重试。", false);
+      return;
+    }
+    if(err && err.conflict){
+      setSyncMsg("同步未完成：另一台设备刚好也在同步。数据在本地安全，点立即同步重试。", false);
       return;
     }
     if(err && err.code === "redirecting"){ /* Page is leaving for Microsoft sign-in; sync resumes on return */
@@ -1543,7 +1698,7 @@ $("btnInstall").addEventListener("click", doInstall);
 $("btnInstallTop").addEventListener("click", function(){ gotoTab("setup"); if(!isStandalone() && deferredInstall) doInstall(); });
 
 /* ==================== Offline Shell (Service Worker) Status ==================== */
-/* Note: this hosting only publishes index.html and assets/. The service worker scope only covers assets/, so the offline shell cannot cover the page itself. The registration result is shown honestly in the status bar. Offline bookkeeping after the page is open relies on local storage and is not affected. */
+/* sw.js sits next to index.html, so its scope covers the whole site and the page itself is cached for offline cold starts. The registration result is shown honestly in the status bar; offline bookkeeping after the page is open relies on local storage either way. */
 function setSwState(text, isErr){
   var el = $("swState");
   if(el){ el.textContent = text; el.style.color = isErr ? "var(--red)" : ""; }
@@ -1576,6 +1731,8 @@ if("serviceWorker" in navigator){
 $("fDate").value=todayStr(); $("tDate").value=todayStr();
 refreshFormSelects();
 setType("expense");
+updateAmtLabel();
+showFxInput();
 renderAll();
 restoreAccount();
 updateSyncUI();
